@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="io.zipit.gui.GuiStateTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-17T12:54:36.374Z" hostname="BF-202508101239" time="0.394">
+  <properties/>
+  <testcase name="buildsConfigFromForm()" classname="io.zipit.gui.GuiStateTest" time="0.289"/>
+  <testcase name="rejectsMissingInput()" classname="io.zipit.gui.GuiStateTest" time="0.038"/>
+  <testcase name="loadsConfigBackIntoForm()" classname="io.zipit.gui.GuiStateTest" time="0.063"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
