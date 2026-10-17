@@ -1,0 +1,447 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zipit License Server</title>
+<style>
+  :root{
+    --bg:#0b1020; --panel:#111827; --panel2:#0f172a; --line:#1f2937;
+    --text:#e5e7eb; --muted:#94a3b8; --accent:#3b82f6; --accent2:#7c3aed;
+    --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",Inter,Roboto,Arial,sans-serif}
+  header{background:linear-gradient(120deg,#1d4ed8,#7c3aed);padding:26px 34px}
+  .brand{font-size:26px;font-weight:800;letter-spacing:.08em}
+  .sub{color:#dbeafe;font-size:13px;margin-top:2px}
+  .header-row{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#34d399;margin-right:6px;box-shadow:0 0 10px #34d399}
+  main{padding:22px 34px 40px;max-width:1440px;margin:0 auto}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .stat b{display:block;font-size:24px}
+  .stat span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
+  h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:#93c5fd}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;
+    background:var(--panel2);color:var(--text);font:inherit;outline:none}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
+  textarea{min-height:150px;resize:vertical;font-family:Consolas,monospace;font-size:12px}
+  button{border:0;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;color:#fff;background:#334155}
+  button:hover{filter:brightness(1.1)}
+  button.primary{background:var(--accent)}
+  button.danger{background:var(--bad)}
+  button.ghost{background:transparent;border:1px solid #475569}
+  .row{display:flex;gap:10px}
+  .row>*{flex:1}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+  .chip{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid #334155;
+    border-radius:999px;padding:5px 10px;font-size:12px;color:#cbd5e1}
+  .chip input{width:auto;accent-color:var(--accent)}
+  .muted{color:var(--muted);font-size:12px}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}
+  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+  .pill.active{background:rgba(16,185,129,.16);color:#6ee7b7}
+  .pill.revoked{background:rgba(239,68,68,.16);color:#fca5a5}
+  .pill.expired{background:rgba(148,163,184,.16);color:#cbd5e1}
+  .actions{display:flex;gap:6px;flex-wrap:wrap}
+  .actions button,.actions a{font-size:12px;padding:6px 9px;border-radius:8px;text-decoration:none;color:#fff}
+  .actions a{background:#334155}
+  pre{white-space:pre-wrap;word-break:break-word;background:#0b1220;border:1px dashed #334155;
+    border-radius:10px;padding:12px;font:12px/1.55 Consolas,monospace;max-height:260px;overflow:auto}
+  .result{margin-top:12px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-size:13px}
+  .result.ok{border-color:rgba(16,185,129,.5)}
+  .result.bad{border-color:rgba(239,68,68,.5)}
+  .token{padding:8px 10px;border-radius:10px;border:1px solid #475569;background:rgba(255,255,255,.08);color:#fff}
+  .hidden{display:none}
+  footer{color:var(--muted);font-size:12px;padding:0 34px 30px;max-width:1440px;margin:0 auto}
+  @media(max-width:980px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<header>
+  <div class="header-row">
+    <div>
+      <div class="brand">ZIPIT LICENSE SERVER</div>
+      <div class="sub"><span class="dot"></span>Local signing service · RSA-SHA256 · revocation registry</div>
+    </div>
+    <div class="actions">
+      <input id="adminToken" class="token" type="password" placeholder="Admin token (optional)">
+      <button class="ghost" onclick="loadAll()">Refresh</button>
+      <button class="ghost" onclick="showPublicKey()">Public key</button>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="stats">
+    <div class="stat"><b id="statTotal">0</b><span>Total licenses</span></div>
+    <div class="stat"><b id="statActive">0</b><span>Active</span></div>
+    <div class="stat"><b id="statRevoked">0</b><span>Revoked</span></div>
+    <div class="stat"><b id="statEditions">0</b><span>Editions</span></div>
+  </section>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Issue a license</h2>
+      <label>Licensee</label>
+      <input id="licensee" placeholder="Acme Corp">
+      <div class="row">
+        <div>
+          <label>Edition</label>
+          <select id="edition">
+            <option>enterprise</option>
+            <option>professional</option>
+            <option>evaluation</option>
+          </select>
+        </div>
+        <div>
+          <label>Expires</label>
+          <input id="expires" type="date">
+        </div>
+      </div>
+      <label>Features</label>
+      <div class="chips">
+        <label class="chip"><input type="checkbox" value="audit" checked>audit</label>
+        <label class="chip"><input type="checkbox" value="policy" checked>policy</label>
+        <label class="chip"><input type="checkbox" value="incremental">incremental</label>
+        <label class="chip"><input type="checkbox" value="plugins">plugins</label>
+        <label class="chip"><input type="checkbox" value="native">native</label>
+        <label class="chip"><input type="checkbox" value="android">android</label>
+      </div>
+      <label>Extra features (comma separated)</label>
+      <input id="extraFeatures" placeholder="e.g. sbom, priority-support">
+      <div style="margin-top:14px"><button class="primary" onclick="createLicense()">Issue &amp; sign</button></div>
+      <div id="createResult" class="hidden">
+        <div class="result ok" style="margin-top:14px">
+          <b>Issued.</b> <span id="createdMeta" class="muted"></span>
+        </div>
+        <pre id="createdYaml"></pre>
+        <div class="actions" style="margin-top:8px">
+          <button onclick="copyText(document.getElementById('createdYaml').innerText)">Copy YAML</button>
+          <button id="createdDownload">Download</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Validate a license</h2>
+      <label>License YAML</label>
+      <textarea id="validateYaml" placeholder="Paste a signed license..."></textarea>
+      <div class="actions" style="margin-top:10px">
+        <button class="primary" onclick="validateLicense()">Validate</button>
+        <button class="ghost" onclick="clearValidate()">Clear</button>
+      </div>
+      <div id="validateResult" class="result hidden"></div>
+      <label style="margin-top:16px">Or validate by id</label>
+      <div class="row">
+        <input id="validateId" placeholder="lic-...">
+        <button class="ghost" onclick="validateId()">Check id</button>
+      </div>
+      <div id="publicKeyBox" class="hidden">
+        <label style="margin-top:16px">Public key (give this to Zipit clients)</label>
+        <pre id="publicKey"></pre>
+        <button class="ghost" onclick="copyText(document.getElementById('publicKey').innerText)">Copy public key</button>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <h2>Client setup</h2>
+    <div class="muted">Give every build your server address. If the server is behind a
+      reverse proxy, start it with <code>--public-url https://your-domain</code> so this
+      page shows the correct URL.</div>
+    <label style="margin-top:12px">YAML (zipit.yml / saved GUI configuration)</label>
+    <pre id="clientYaml">license:
+  enabled: true
+  file: "license.yml"
+  publicKey: "public.pem"
+  server: "{{PUBLIC_URL}}"
+  require: true
+  features:
+    - audit</pre>
+    <div class="actions">
+      <button onclick="copyText(document.getElementById('clientYaml').innerText)">Copy YAML</button>
+    </div>
+    <label style="margin-top:12px">Command line</label>
+    <pre id="clientCli">--license license.yml --license-key public.pem --license-server {{PUBLIC_URL}} --require-license</pre>
+    <div class="actions">
+      <button onclick="copyText(document.getElementById('clientCli').innerText)">Copy command</button>
+    </div>
+    <div class="muted" style="margin-top:10px">Or set the environment variable
+      <code>ZIPIT_LICENSE_SERVER={{PUBLIC_URL}}</code>. Clients verify the RSA signature
+      locally and use this server only for revocation and online validation.</div>
+  </section>
+
+  <section class="card">
+    <h2>Issued licenses</h2>
+    <div class="muted" id="tableEmpty">No licenses yet.</div>
+    <table id="licenseTable" class="hidden">
+      <thead>
+        <tr><th>Id</th><th>Licensee</th><th>Edition</th><th>Expires</th><th>Features</th><th>Status</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="licenseRows"></tbody>
+    </table>
+  </section>
+</main>
+
+<footer>
+  Zipit License Server · data is stored next to the server process. Bind to localhost
+  unless you have put an authenticating reverse proxy in front of it.
+</footer>
+
+<script>
+const $ = id => document.getElementById(id);
+let adminToken = localStorage.getItem("zipit.adminToken") || "";
+let lastIssued = null;
+
+function authHeaders(extra) {
+  const headers = Object.assign({}, extra || {});
+  if (adminToken) headers["X-Admin-Token"] = adminToken;
+  return headers;
+}
+
+async function api(path, options) {
+  const request = Object.assign({}, options || {});
+  request.headers = authHeaders(request.headers);
+  const response = await fetch(path, request);
+  const text = await response.text();
+  let data;
+  try { data = JSON.parse(text); } catch (e) { data = {error: text}; }
+  if (response.status === 401) throw new Error("Admin token required");
+  if (!response.ok) throw new Error(data.error || data.reason || ("HTTP " + response.status));
+  return data;
+}
+
+function esc(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
+
+function today() { return new Date().toISOString().slice(0, 10); }
+
+function defaultExpiry() {
+  const d = new Date(Date.now() + 365 * 86400000);
+  return d.toISOString().slice(0, 10);
+}
+
+async function loadAll() {
+  try {
+    const list = await api("/api/licenses");
+    render(list);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+function statusOf(record) {
+  if (record.revoked) return "revoked";
+  const expires = new Date(record.expires + "T23:59:59");
+  if (!isNaN(expires.getTime()) && expires < new Date()) return "expired";
+  return "active";
+}
+
+function render(list) {
+  const rows = $("licenseRows");
+  rows.innerHTML = "";
+  let active = 0, revoked = 0;
+  const editions = new Set();
+  list.forEach(record => {
+    const status = statusOf(record);
+    if (status === "active") active++;
+    if (status === "revoked") revoked++;
+    editions.add(record.edition);
+    const tr = document.createElement("tr");
+    tr.innerHTML =
+      "<td><code>" + esc(record.id) + "</code></td>" +
+      "<td>" + esc(record.licensee) + "</td>" +
+      "<td>" + esc(record.edition) + "</td>" +
+      "<td>" + esc(record.expires) + "</td>" +
+      "<td class='muted'>" + esc((record.features || []).join(", ")) + "</td>" +
+      "<td><span class='pill " + status + "'>" + status + "</span></td>" +
+      "<td><div class='actions'>" +
+        "<button onclick=\"downloadLicense('" + esc(record.id) + "')\">Download</button>" +
+        "<button onclick=\"copyLicense('" + esc(record.id) + "')\">Copy</button>" +
+        (status === "revoked" ? "" :
+          "<button onclick=\"renewLicense('" + esc(record.id) + "')\">Renew</button>" +
+          "<button class='danger' onclick=\"revoke('" + esc(record.id) + "')\">Revoke</button>") +
+      "</div></td>";
+    rows.appendChild(tr);
+  });
+  $("statTotal").textContent = list.length;
+  $("statActive").textContent = active;
+  $("statRevoked").textContent = revoked;
+  $("statEditions").textContent = editions.size;
+  $("licenseTable").classList.toggle("hidden", list.length === 0);
+  $("tableEmpty").classList.toggle("hidden", list.length !== 0);
+}
+
+function selectedFeatures() {
+  const features = [];
+  document.querySelectorAll(".chip input:checked").forEach(input => features.push(input.value));
+  const extra = $("extraFeatures").value.split(",").map(v => v.trim()).filter(Boolean);
+  extra.forEach(value => { if (!features.includes(value)) features.push(value); });
+  return features;
+}
+
+async function createLicense() {
+  const licensee = $("licensee").value.trim();
+  const expires = $("expires").value || defaultExpiry();
+  if (!licensee) { alert("Licensee is required"); return; }
+  const body = new URLSearchParams({
+    licensee: licensee,
+    edition: $("edition").value,
+    expires: expires,
+    features: selectedFeatures().join(",")
+  });
+  try {
+    const record = await api("/api/licenses", {method: "POST", body: body});
+    showIssued(record);
+    await loadAll();
+  } catch (e) {
+    alert("Issue failed: " + e.message);
+  }
+}
+
+function showIssued(record) {
+  lastIssued = record;
+  $("createResult").classList.remove("hidden");
+  $("createdMeta").textContent = record.id + " · " + record.licensee + " · " + record.expires;
+  $("createdYaml").textContent = record.license;
+  $("createdDownload").onclick = () => downloadLicense(record.id);
+}
+
+async function renewLicense(id) {
+  const expires = prompt("New expiry (YYYY-MM-DD)", defaultExpiry());
+  if (!expires) return;
+  try {
+    const record = await api("/api/licenses/" + encodeURIComponent(id) + "/renew", {
+      method: "POST",
+      body: new URLSearchParams({expires: expires})
+    });
+    showIssued(record);
+    await loadAll();
+  } catch (e) {
+    alert("Renew failed: " + e.message);
+  }
+}
+
+async function downloadLicense(id) {
+  try {
+    const response = await fetch("/api/licenses/" + encodeURIComponent(id) + "/download",
+      {headers: authHeaders()});
+    if (response.status === 401) throw new Error("Admin token required");
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    const blob = await response.blob();
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = id + ".yml";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+  } catch (e) {
+    alert("Download failed: " + e.message);
+  }
+}
+
+async function revoke(id) {
+  if (!confirm("Revoke " + id + "?")) return;
+  try {
+    await api("/api/licenses/" + encodeURIComponent(id) + "/revoke", {method: "POST"});
+    await loadAll();
+  } catch (e) {
+    alert("Revoke failed: " + e.message);
+  }
+}
+
+async function copyLicense(id) {
+  try {
+    const response = await fetch("/api/licenses/" + encodeURIComponent(id) + "/download",
+      {headers: authHeaders()});
+    if (!response.ok) throw new Error("HTTP " + response.status);
+    copyText(await response.text());
+  } catch (e) {
+    alert("Copy failed: " + e.message);
+  }
+}
+
+async function validateLicense() {
+  const license = $("validateYaml").value.trim();
+  if (!license) { alert("Paste a license first"); return; }
+  await doValidate(new URLSearchParams({license: license}));
+}
+
+async function validateId() {
+  const id = $("validateId").value.trim();
+  if (!id) { alert("Enter an id"); return; }
+  await doValidate(new URLSearchParams({id: id}));
+}
+
+async function doValidate(body) {
+  const box = $("validateResult");
+  box.classList.remove("hidden", "ok", "bad");
+  try {
+    const result = await api("/api/validate", {method: "POST", body: body});
+    box.classList.add(result.valid ? "ok" : "bad");
+    box.innerHTML = "<b>" + (result.valid ? "VALID" : "INVALID") + "</b> · " +
+      esc(result.reason) +
+      (result.licensee ? "<div class='muted' style='margin-top:6px'>" +
+        esc(result.licensee) + " · " + esc(result.edition) + " · expires " + esc(result.expires) +
+        " · " + esc((result.features || []).join(", ")) + "</div>" : "");
+  } catch (e) {
+    box.classList.add("bad");
+    box.textContent = "Validation failed: " + e.message;
+  }
+}
+
+function clearValidate() {
+  $("validateYaml").value = "";
+  $("validateResult").classList.add("hidden");
+}
+
+async function showPublicKey() {
+  try {
+    const key = await (await fetch("/api/public-key")).text();
+    $("publicKey").textContent = key;
+    $("publicKeyBox").classList.remove("hidden");
+  } catch (e) {
+    alert("Unable to load public key");
+  }
+}
+
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
+  } else {
+    fallbackCopy(text);
+  }
+}
+
+function fallbackCopy(text) {
+  const area = document.createElement("textarea");
+  area.value = text;
+  document.body.appendChild(area);
+  area.select();
+  document.execCommand("copy");
+  document.body.removeChild(area);
+}
+
+$("expires").value = defaultExpiry();
+$("adminToken").value = adminToken;
+$("adminToken").addEventListener("input", event => {
+  adminToken = event.target.value.trim();
+  localStorage.setItem("zipit.adminToken", adminToken);
+  loadAll();
+});
+loadAll();
+setInterval(loadAll, 15000);
+</script>
+</body>
+</html>

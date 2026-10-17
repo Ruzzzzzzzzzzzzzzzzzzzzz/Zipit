@@ -1,0 +1,24 @@
+dependencies {
+    implementation project(':zipit-core')
+    compileOnly 'org.apache.maven:maven-plugin-api:3.0'
+}
+
+publishing {
+    publications {
+        withType(MavenPublication) {
+            pom.withXml {
+                def deps = asNode().get('dependencies')
+                def dependenciesNode = deps.isEmpty() ? asNode().appendNode('dependencies') : deps[0]
+                def dependency = dependenciesNode.appendNode('dependency')
+                dependency.appendNode('groupId', 'org.apache.maven')
+                dependency.appendNode('artifactId', 'maven-plugin-api')
+                dependency.appendNode('version', '3.0')
+                dependency.appendNode('scope', 'provided')
+            }
+        }
+    }
+}
+
+jar {
+    archiveBaseName = 'zipit-maven-plugin'
+}

@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<plugin>
+  <name>Zipit Maven Plugin</name>
+  <description>Deterministic Java bytecode obfuscation with Zipit.</description>
+  <groupId>io.zipit</groupId>
+  <artifactId>zipit-maven-plugin</artifactId>
+  <version>1.0.0</version>
+  <goalPrefix>zipit</goalPrefix>
+  <isolatedRealm>false</isolatedRealm>
+  <inheritedByDefault>true</inheritedByDefault>
+  <mojos>
+    <mojo>
+      <goal>obfuscate</goal>
+      <description>Obfuscates the project JAR with Zipit.</description>
+      <requiresDependencyResolution>runtime</requiresDependencyResolution>
+      <requiresDirectInvocation>false</requiresDirectInvocation>
+      <requiresProject>true</requiresProject>
+      <requiresReports>false</requiresReports>
+      <aggregator>false</aggregator>
+      <requiresOnline>false</requiresOnline>
+      <inheritedByDefault>true</inheritedByDefault>
+      <implementation>io.zipit.maven.ZipitMojo</implementation>
+      <language>java</language>
+      <instantiationStrategy>per-lookup</instantiationStrategy>
+      <executionStrategy>once-per-session</executionStrategy>
+      <phase>package</phase>
+      <threadSafe>true</threadSafe>
+      <parameters>
+        <parameter>
+          <name>input</name>
+          <type>java.io.File</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Input JAR.</description>
+        </parameter>
+        <parameter>
+          <name>output</name>
+          <type>java.io.File</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Output JAR.</description>
+        </parameter>
+        <parameter>
+          <name>configFile</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Optional YAML configuration file.</description>
+        </parameter>
+        <parameter>
+          <name>keep</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Keep rules.</description>
+        </parameter>
+        <parameter>
+          <name>libraries</name>
+          <type>java.util.List</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Library JARs or directories.</description>
+        </parameter>
+        <parameter>
+          <name>seed</name>
+          <type>java.lang.Long</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Deterministic seed.</description>
+        </parameter>
+        <parameter>
+          <name>verify</name>
+          <type>boolean</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Verify every output class with the JVM.</description>
+        </parameter>
+        <parameter>
+          <name>preset</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Policy preset name.</description>
+        </parameter>
+        <parameter>
+          <name>inputMapping</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>Previous mapping used for stable builds.</description>
+        </parameter>
+        <parameter>
+          <name>reportHtml</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>HTML audit report path.</description>
+        </parameter>
+        <parameter>
+          <name>reportJson</name>
+          <type>java.lang.String</type>
+          <required>false</required>
+          <editable>true</editable>
+          <description>JSON audit report path.</description>
+        </parameter>
+      </parameters>
+      <configuration>
+        <input implementation="java.io.File">${project.build.directory}/${project.build.finalName}.jar</input>
+        <output implementation="java.io.File">${project.build.directory}/${project.build.finalName}-obfuscated.jar</output>
+        <seed implementation="java.lang.Long">23303</seed>
+        <verify implementation="boolean">false</verify>
+      </configuration>
+    </mojo>
+  </mojos>
+</plugin>
