@@ -1,0 +1,23 @@
+stages:
+  - protect
+
+zipit:
+  image: eclipse-temurin:8-jdk
+  stage: protect
+  script:
+    - bash build.sh build dist
+    - |
+      java -jar dist/zipit-1.0.0-all.jar \
+        -i build/libs/app.jar \
+        -o build/libs/app-obfuscated.jar \
+        --preset library \
+        --keep-public-api \
+        --verify \
+        --report-json build/reports/zipit-audit.json
+  artifacts:
+    when: always
+    paths:
+      - build/libs/app-obfuscated.jar
+      - build/libs/zipit-mapping.txt
+      - build/reports/zipit-audit.json
+    expire_in: 30 days

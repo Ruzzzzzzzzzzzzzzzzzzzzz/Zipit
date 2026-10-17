@@ -1,0 +1,31 @@
+pipeline {
+    agent any
+    tools {
+        jdk 'jdk8'
+    }
+    stages {
+        stage('Build Zipit') {
+            steps {
+                sh 'bash build.sh build dist'
+            }
+        }
+        stage('Obfuscate') {
+            steps {
+                sh '''
+                    java -jar dist/zipit-1.0.0-all.jar \
+                      -i build/libs/app.jar \
+                      -o build/libs/app-obfuscated.jar \
+                      --preset spring-boot \
+                      --verify \
+                      --report build/reports/zipit-audit.html \
+                      --report-json build/reports/zipit-audit.json
+                '''
+            }
+        }
+        stage('Archive') {
+            steps {
+                archiveArtifacts artifacts: 'build/libs/app-obfuscated.jar, build/libs/zipit-mapping.txt, build/reports/zipit-audit.*', fingerprint: true
+            }
+        }
+    }
+}

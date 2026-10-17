@@ -1,0 +1,27 @@
+// settings.gradle (use the local build as a plugin source)
+pluginManagement {
+    includeBuild('../Zipit')
+}
+
+// build.gradle
+plugins {
+    id 'java'
+    id 'io.zipit.gradle'
+}
+
+zipit {
+    input = file("$buildDir/libs/app.jar")
+    output = file("$buildDir/libs/app-obfuscated.jar")
+    libraries.from(configurations.runtimeClasspath)
+    keep = [
+            'com.example.Main',
+            'com.example.api.**',
+            '@io.zipit.annotations.Keep'
+    ]
+    preset = 'spring-boot'
+    seed = 23303L
+    verify = true
+    reportHtml = file("$buildDir/reports/zipit-audit.html")
+    reportJson = file("$buildDir/reports/zipit-audit.json")
+    // inputMapping = file("$buildDir/libs/zipit-mapping.txt").absolutePath
+}

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Example Maven configuration.
+
+  Install the plugin locally first:
+    ./build.sh :zipit-annotations:publishToMavenLocal \
+               :zipit-core:publishToMavenLocal \
+               :zipit-maven-plugin:publishToMavenLocal
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>com.example</groupId>
+  <artifactId>app</artifactId>
+  <version>1.0.0</version>
+  <packaging>jar</packaging>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>io.zipit</groupId>
+        <artifactId>zipit-maven-plugin</artifactId>
+        <version>1.0.0</version>
+        <executions>
+          <execution>
+            <goals>
+              <goal>obfuscate</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <keep>
+            <keep>com.example.Main</keep>
+            <keep>com.example.api.**</keep>
+            <keep>@io.zipit.annotations.Keep</keep>
+          </keep>
+          <preset>spring-boot</preset>
+          <verify>true</verify>
+          <reportHtml>${project.build.directory}/zipit-audit.html</reportHtml>
+          <reportJson>${project.build.directory}/zipit-audit.json</reportJson>
+          <!--
+          <inputMapping>${project.build.directory}/zipit-mapping.txt</inputMapping>
+          <license>${project.basedir}/zipit-license.yml</license>
+          -->
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>
