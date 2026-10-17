@@ -261,8 +261,3 @@ gradle runObfuscated
 
 See `integration/README.md` for details.
 
-## License
-
-This is an original implementation. It does not include source code from any
-third-party obfuscator. Third-party components and their licenses are listed in
-[`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
