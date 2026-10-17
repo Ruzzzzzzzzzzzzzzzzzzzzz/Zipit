@@ -1,0 +1,98 @@
+allprojects {
+    group = 'io.zipit'
+    version = '1.0.0'
+}
+
+task sbom {
+    doLast {
+        def components = [
+                [type: 'library', name: 'asm', version: '9.11', licenses: [[license: [id: 'BSD-3-Clause']]], purl: 'pkg:maven/org.ow2.asm/asm@9.11'],
+                [type: 'library', name: 'asm-tree', version: '9.11', licenses: [[license: [id: 'BSD-3-Clause']]], purl: 'pkg:maven/org.ow2.asm/asm-tree@9.11'],
+                [type: 'library', name: 'asm-commons', version: '9.11', licenses: [[license: [id: 'BSD-3-Clause']]], purl: 'pkg:maven/org.ow2.asm/asm-commons@9.11'],
+                [type: 'library', name: 'asm-analysis', version: '9.11', licenses: [[license: [id: 'BSD-3-Clause']]], purl: 'pkg:maven/org.ow2.asm/asm-analysis@9.11'],
+                [type: 'library', name: 'asm-util', version: '9.11', licenses: [[license: [id: 'BSD-3-Clause']]], purl: 'pkg:maven/org.ow2.asm/asm-util@9.11'],
+                [type: 'library', name: 'flatlaf', version: '3.5.4', licenses: [[license: [id: 'Apache-2.0']]], purl: 'pkg:maven/com.formdev/flatlaf@3.5.4'],
+                [type: 'library', name: 'junit-jupiter', version: '5.10.1', scope: 'test', licenses: [[license: [id: 'EPL-2.0']]], purl: 'pkg:maven/org.junit.jupiter/junit-jupiter@5.10.1']
+        ]
+        def bom = [
+                bomFormat: 'CycloneDX',
+                specVersion: '1.4',
+                version: 1,
+                metadata: [
+                        timestamp: new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'"),
+                        component: [type: 'application', name: 'zipit', version: '1.0.0']
+                ],
+                components: components
+        ]
+        def out = file("$buildDir/sbom/zipit-sbom.json")
+        out.parentFile.mkdirs()
+        out.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(bom))
+    }
+}
+
+task dist(type: Copy) {
+    dependsOn ':zipit-cli:fatJar', ':zipit-gui:fatJar',
+            ':zipit-gradle-plugin:jar', ':zipit-maven-plugin:jar',
+            ':zipit-license-server:fatJar', 'sbom'
+    from 'zipit-cli/build/libs/zipit-1.0.0-all.jar'
+    from 'zipit-gui/build/libs/zipit-gui-1.0.0-all.jar'
+    from 'zipit-gradle-plugin/build/libs/zipit-gradle-plugin-1.0.0.jar'
+    from 'zipit-maven-plugin/build/libs/zipit-maven-plugin-1.0.0.jar'
+    from 'zipit-license-server/build/libs/zipit-license-server-1.0.0-all.jar'
+    from "$buildDir/sbom/zipit-sbom.json"
+    from 'zipit.example.yml'
+    into 'dist'
+}
+
+dist.doLast {
+    def dir = file('dist')
+    def files = dir.listFiles().findAll { it.isFile() && it.name != 'SHA256SUMS' }.sort { it.name }
+    def lines = files.collect { f ->
+        def digest = java.security.MessageDigest.getInstance('SHA-256')
+        def hash = digest.digest(f.bytes).collect { String.format('%02x', it & 0xff) }.join()
+        "$hash  ${f.name}"
+    }
+    new File(dir, 'SHA256SUMS').text = lines.join('\n') + '\n'
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    if (project.name != 'zipit-gradle-plugin') {
+        apply plugin: 'maven-publish'
+        publishing {
+            publications {
+                mavenJava(MavenPublication) {
+                    from components.java
+                    groupId = 'io.zipit'
+                    artifactId = project.name
+                    version = project.version
+                    if (project.name == 'zipit-maven-plugin') {
+                        pom.packaging = 'maven-plugin'
+                    }
+                }
+            }
+        }
+    }
+
+    sourceCompatibility = 1.8
+    targetCompatibility = 1.8
+
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+        options.compilerArgs += ['-Xlint:-options']
+    }
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+
+    test {
+        useJUnitPlatform()
+        testLogging {
+            events 'passed', 'skipped', 'failed'
+            exceptionFormat 'full'
+        }
+    }
+}

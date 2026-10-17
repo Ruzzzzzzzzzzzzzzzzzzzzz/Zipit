@@ -1,0 +1,9 @@
+rootProject.name = 'zipit'
+
+include 'zipit-annotations'
+include 'zipit-core'
+include 'zipit-cli'
+include 'zipit-gui'
+include 'zipit-gradle-plugin'
+include 'zipit-maven-plugin'
+include 'zipit-license-server'

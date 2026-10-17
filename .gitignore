@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+build/
+*/build/
+!gradle/wrapper/gradle-wrapper.jar
+!lib/*.jar
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Build output
+dist/
+out.jar
+out2.jar
+zipit-mapping.txt
+*.log
+
+# License server runtime data / keys
+license-data/
+*.pem
+*.jks
+*.keystore
+
+# OS noise
+.DS_Store
+Thumbs.db
