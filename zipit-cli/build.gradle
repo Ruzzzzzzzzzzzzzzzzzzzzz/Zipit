@@ -1,0 +1,24 @@
+dependencies {
+    implementation project(':zipit-core')
+}
+
+jar {
+    archiveBaseName = 'zipit-cli'
+    manifest {
+        attributes 'Main-Class': 'io.zipit.cli.Main'
+    }
+}
+
+task fatJar(type: Jar) {
+    archiveBaseName = 'zipit'
+    archiveClassifier = 'all'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+    manifest {
+        attributes 'Main-Class': 'io.zipit.cli.Main'
+    }
+    from sourceSets.main.output
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+}
+
+assemble.dependsOn fatJar
