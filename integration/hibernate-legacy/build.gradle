@@ -1,0 +1,78 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'zipit.integration'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.hibernate:hibernate-core:5.6.15.Final'
+    runtimeOnly 'com.h2database:h2:2.2.224'
+    runtimeOnly 'javax.xml.bind:jaxb-api:2.3.1'
+    runtimeOnly 'org.glassfish.jaxb:jaxb-runtime:2.3.8'
+}
+
+application {
+    mainClass = 'hibdemo.HibernateDemo'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_1_8
+    targetCompatibility = JavaVersion.VERSION_1_8
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    archiveBaseName = 'hibernate-legacy-demo'
+    archiveFileName = 'hibernate-legacy-demo.jar'
+    manifest {
+        attributes 'Main-Class': 'hibdemo.HibernateDemo'
+    }
+}
+
+def zipitJar = file("$projectDir/../../dist/zipit-1.0.0-all.jar")
+def appJar = file("$buildDir/libs/hibernate-legacy-demo.jar")
+def obfuscatedJar = file("$buildDir/libs/hibernate-legacy-demo-obf.jar")
+def libraryArgs = []
+configurations.runtimeClasspath.files.findAll { it.name.endsWith('.jar') }.each {
+    libraryArgs.add('--lib')
+    libraryArgs.add(it.absolutePath)
+}
+
+tasks.register('printClasspath') {
+    doLast {
+        println configurations.runtimeClasspath.asPath
+    }
+}
+
+tasks.register('obfuscate', JavaExec) {
+    dependsOn jar
+    classpath = files(zipitJar)
+    mainClass = 'io.zipit.cli.Main'
+    args(['-i', appJar.absolutePath,
+          '-o', obfuscatedJar.absolutePath,
+          '--preset', 'jackson',
+          '--virtualize',
+          '--anti-llm',
+          '--verify'] + libraryArgs)
+}
+
+tasks.register('runObfuscated', Exec) {
+    dependsOn 'obfuscate'
+    doFirst {
+        def jarFile = new java.util.jar.JarFile(obfuscatedJar)
+        def main = jarFile.manifest.mainAttributes.getValue('Main-Class')
+        jarFile.close()
+        def classpath = obfuscatedJar.absolutePath + File.pathSeparator +
+                configurations.runtimeClasspath.asPath
+        commandLine "${System.getProperty('java.home')}/bin/java", '-cp', classpath, main
+    }
+}

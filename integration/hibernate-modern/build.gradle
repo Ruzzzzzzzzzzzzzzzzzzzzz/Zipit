@@ -1,0 +1,77 @@
+plugins {
+    id 'java'
+    id 'application'
+}
+
+group = 'zipit.integration'
+version = '1.0.0'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.hibernate.orm:hibernate-core:7.4.13.Final'
+    runtimeOnly 'com.h2database:h2:2.3.232'
+}
+
+application {
+    mainClass = 'hibdemo7.HibernateDemo'
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 17
+}
+
+jar {
+    archiveBaseName = 'hibernate-modern-demo'
+    archiveFileName = 'hibernate-modern-demo.jar'
+    manifest {
+        attributes 'Main-Class': 'hibdemo7.HibernateDemo'
+    }
+}
+
+def zipitJar = file("$projectDir/../../dist/zipit-1.0.0-all.jar")
+def appJar = file("$buildDir/libs/hibernate-modern-demo.jar")
+def obfuscatedJar = file("$buildDir/libs/hibernate-modern-demo-obf.jar")
+def libraryArgs = []
+configurations.runtimeClasspath.files.findAll { it.name.endsWith('.jar') }.each {
+    libraryArgs.add('--lib')
+    libraryArgs.add(it.absolutePath)
+}
+
+tasks.register('printClasspath') {
+    doLast {
+        println configurations.runtimeClasspath.asPath
+    }
+}
+
+tasks.register('obfuscate', JavaExec) {
+    dependsOn jar
+    classpath = files(zipitJar)
+    mainClass = 'io.zipit.cli.Main'
+    args(['-i', appJar.absolutePath,
+          '-o', obfuscatedJar.absolutePath,
+          '--preset', 'jackson',
+          '--virtualize',
+          '--anti-llm',
+          '--verify'] + libraryArgs)
+}
+
+tasks.register('runObfuscated', Exec) {
+    dependsOn 'obfuscate'
+    doFirst {
+        def jarFile = new java.util.jar.JarFile(obfuscatedJar)
+        def main = jarFile.manifest.mainAttributes.getValue('Main-Class')
+        jarFile.close()
+        def classpath = obfuscatedJar.absolutePath + File.pathSeparator +
+                configurations.runtimeClasspath.asPath
+        commandLine "${System.getProperty('java.home')}/bin/java", '-cp', classpath, main
+    }
+}
