@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="io.zipit.gradle.ZipitPluginTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-10-17T12:54:23.634Z" hostname="BF-202508101239" time="8.345">
-  <properties/>
-  <testcase name="registersExtensionAndTask()" classname="io.zipit.gradle.ZipitPluginTest" time="8.345"/>
-  <system-out><![CDATA[Executing Gradle on JVM versions 16 and lower has been deprecated. This will fail with an error in Gradle 9.0. Use JVM 17 or greater to execute Gradle. Projects can continue to use older JVM versions via toolchains. Consult the upgrading guide for further information: https://docs.gradle.org/8.14/userguide/upgrading_version_8.html#minimum_daemon_jvm_version
-]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

@@ -1,9 +1,0 @@
-# Zipit mapping file
-# class and member descriptors are JVM descriptors
-
-hibdemo/HibernateDemo -> hibdemo/a:
-
-hibdemo/Score -> hibdemo/b:
-    label(I)Ljava/lang/String; -> b
-    totalAge(Ljava/util/List;)I -> a
-

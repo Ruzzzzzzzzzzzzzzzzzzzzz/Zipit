@@ -18,6 +18,9 @@ out2.jar
 zipit-mapping.txt
 *.log
 
+# Archives of build output
+*.rar
+
 # License server runtime data / keys
 license-data/
 *.pem
