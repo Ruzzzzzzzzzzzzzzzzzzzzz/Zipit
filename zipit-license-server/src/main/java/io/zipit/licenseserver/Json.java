@@ -1,12 +1,12 @@
 package io.zipit.licenseserver;
 
 /** Minimal JSON string helpers (the server only emits small flat objects). */
-final class Json {
+public final class Json {
 
     private Json() {
     }
 
-    static String quote(String value) {
+    public static String quote(String value) {
         if (value == null) {
             return "null";
         }
@@ -31,7 +31,7 @@ final class Json {
         return out.append('"').toString();
     }
 
-    static String bool(boolean value) {
+    public static String bool(boolean value) {
         return value ? "true" : "false";
     }
 }

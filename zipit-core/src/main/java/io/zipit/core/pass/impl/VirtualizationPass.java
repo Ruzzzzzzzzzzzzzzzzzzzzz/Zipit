@@ -412,6 +412,8 @@ public final class VirtualizationPass implements Pass {
             context.stats().add("antiLlm.shieldedPayloads", 1);
         }
         code.add(new InsnNode(Opcodes.RETURN));
+        // Deepest path: decrypt loop (array, index, array, index, key, mask) = 6.
+        clinit.maxStack = 6;
         node.methods.add(clinit);
 
         context.classes().addGenerated(node);
@@ -483,7 +485,8 @@ public final class VirtualizationPass implements Pass {
         code.add(end);
         code.add(new InsnNode(Opcodes.RETURN));
         clinit.maxLocals = 2;
-        clinit.maxStack = 0;
+        // Stack: key array + loop index + state + index + constant = 5.
+        clinit.maxStack = 5;
         node.methods.add(clinit);
 
         context.classes().addGenerated(node);
@@ -563,7 +566,9 @@ public final class VirtualizationPass implements Pass {
     }
 
     private void rewrite(ClassNode owner, MethodNode method, Payload payload, Holder holder) {
-        int localsSlot = Math.max(1, method.maxLocals);
+        // Argument slots are part of the calling convention and must never be
+        // reused: the interpreter array starts right after them.
+        int localsSlot = Math.max(1, Math.max(method.maxLocals, argumentSlots(method)));
         int resultSlot = localsSlot + 1;
         InsnList out = new InsnList();
         AsmUtil.pushInt(out, localsSlot);
@@ -600,7 +605,24 @@ public final class VirtualizationPass implements Pass {
         } else {
             out.add(new VarInsnNode(Opcodes.ALOAD, resultSlot));
             switch (returns.getSort()) {
-                case Type.BOOLEAN:
+                case Type.BOOLEAN: {
+                    // Accept both representations: Integer 0/1 (normalized VM)
+                    // and java.lang.Boolean (older payloads / reflection).
+                    LabelNode numberPath = new LabelNode();
+                    out.add(new InsnNode(Opcodes.DUP));
+                    out.add(new TypeInsnNode(Opcodes.INSTANCEOF, "java/lang/Boolean"));
+                    out.add(new JumpInsnNode(Opcodes.IFEQ, numberPath));
+                    out.add(new TypeInsnNode(Opcodes.CHECKCAST, "java/lang/Boolean"));
+                    out.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/Boolean",
+                            "booleanValue", "()Z", false));
+                    out.add(new InsnNode(Opcodes.IRETURN));
+                    out.add(numberPath);
+                    out.add(new TypeInsnNode(Opcodes.CHECKCAST, "java/lang/Number"));
+                    out.add(new MethodInsnNode(Opcodes.INVOKEVIRTUAL, "java/lang/Number",
+                            "intValue", "()I", false));
+                    out.add(new InsnNode(Opcodes.IRETURN));
+                    break;
+                }
                 case Type.BYTE:
                 case Type.CHAR:
                 case Type.SHORT:
@@ -638,19 +660,33 @@ public final class VirtualizationPass implements Pass {
 
         method.instructions = out;
         method.maxLocals = localsSlot + 2;
-        method.maxStack = 0;
+        // Deepest path builds one boxed argument: array + index + widest load
+        // (2 slots) = 4; the dispatch call site peaks at four references too.
+        method.maxStack = 4;
         method.tryCatchBlocks = new ArrayList<org.objectweb.asm.tree.TryCatchBlockNode>();
         method.localVariables = null;
         method.visibleLocalVariableAnnotations = null;
         method.invisibleLocalVariableAnnotations = null;
     }
 
+    private static int argumentSlots(MethodNode method) {
+        int slots = (method.access & Opcodes.ACC_STATIC) == 0 ? 1 : 0;
+        for (Type argument : Type.getArgumentTypes(method.desc)) {
+            slots += argument.getSize();
+        }
+        return slots;
+    }
+
     private static void box(InsnList out, Type type) {
         switch (type.getSort()) {
-            case Type.BOOLEAN:
-                out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Boolean", "valueOf",
-                        "(Z)Ljava/lang/Boolean;", false));
-                break;
+                case Type.BOOLEAN:
+                    // A JVM boolean operand is an int (0/1) on the stack. Store it
+                    // as an Integer so the interpreter never has to unbox a
+                    // java.lang.Boolean while executing virtualized bytecode
+                    // (if/if_icmp/iand/... all use the int representation).
+                    out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Integer", "valueOf",
+                            "(I)Ljava/lang/Integer;", false));
+                    break;
             case Type.BYTE:
                 out.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "java/lang/Byte", "valueOf",
                         "(B)Ljava/lang/Byte;", false));

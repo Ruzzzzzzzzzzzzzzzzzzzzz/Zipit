@@ -1,13 +1,19 @@
 package io.zipit.core.engine;
 
+import org.objectweb.asm.ClassReader;
+
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -15,8 +21,19 @@ import java.util.zip.ZipFile;
 /**
  * Loads every class from an output JAR without initializing it, forcing the
  * JVM to link (and therefore verify) the bytecode.
+ *
+ * <p>Class names are derived from the class file itself rather than from the
+ * ZIP entry path, so fat-jar layouts such as Spring Boot
+ * {@code BOOT-INF/classes/} or WAR {@code WEB-INF/classes/} are verified under
+ * their real binary names. Their bytes are registered with a child-first
+ * loader because a plain {@link URLClassLoader} only looks at the JAR root.</p>
  */
 public final class ZipitVerifier {
+
+    /** Directory prefixes whose contents are still classes on the runtime classpath. */
+    private static final String[] CLASS_ROOT_PREFIXES = {
+            "BOOT-INF/classes/", "WEB-INF/classes/"
+    };
 
     private ZipitVerifier() {
     }
@@ -39,6 +56,7 @@ public final class ZipitVerifier {
     public static List<String> verify(Path jar, List<Path> libraries) throws IOException {
         List<String> errors = new ArrayList<String>();
         Set<String> classNames = new LinkedHashSet<String>();
+        Map<String, byte[]> prefixedClasses = new LinkedHashMap<String, byte[]>();
         try (ZipFile zip = new ZipFile(jar.toFile())) {
             Enumeration<? extends ZipEntry> entries = zip.entries();
             while (entries.hasMoreElements()) {
@@ -53,7 +71,18 @@ public final class ZipitVerifier {
                 if (name.equals("module-info.class") || name.endsWith("/module-info.class")) {
                     continue;
                 }
-                classNames.add(name.substring(0, name.length() - ".class".length()).replace('/', '.'));
+                byte[] bytes = readAll(zip.getInputStream(entry));
+                String className = className(bytes, name);
+                if (className == null) {
+                    continue;
+                }
+                classNames.add(className);
+                String expectedEntry = className.replace('.', '/') + ".class";
+                if (!expectedEntry.equals(name)) {
+                    // Stored under BOOT-INF/classes/ or a similar prefix: keep the
+                    // bytes so the loader below can still define the class.
+                    prefixedClasses.put(className, bytes);
+                }
             }
         }
 
@@ -66,8 +95,18 @@ public final class ZipitVerifier {
                 }
             }
         }
+        final Map<String, byte[]> extra = prefixedClasses;
         URLClassLoader loader = new URLClassLoader(urls.toArray(new URL[0]),
-                ZipitVerifier.class.getClassLoader());
+                ZipitVerifier.class.getClassLoader()) {
+            @Override
+            protected Class<?> findClass(String className) throws ClassNotFoundException {
+                byte[] bytes = extra.get(className);
+                if (bytes != null) {
+                    return defineClass(className, bytes, 0, bytes.length);
+                }
+                return super.findClass(className);
+            }
+        };
         try {
             for (String className : classNames) {
                 try {
@@ -82,5 +121,32 @@ public final class ZipitVerifier {
             loader.close();
         }
         return errors;
+    }
+
+    /** Reads the real binary name (dotted) from the class file bytes. */
+    private static String className(byte[] bytes, String entryName) {
+        try {
+            return new ClassReader(bytes).getClassName().replace('/', '.');
+        } catch (RuntimeException malformed) {
+            // Still report unparseable classes under a best-effort name.
+            String stem = entryName.substring(0, entryName.length() - ".class".length());
+            for (String prefix : CLASS_ROOT_PREFIXES) {
+                if (stem.startsWith(prefix)) {
+                    stem = stem.substring(prefix.length());
+                    break;
+                }
+            }
+            return stem.replace('/', '.');
+        }
+    }
+
+    private static byte[] readAll(InputStream in) throws IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int read;
+        while ((read = in.read(buffer)) >= 0) {
+            out.write(buffer, 0, read);
+        }
+        return out.toByteArray();
     }
 }

@@ -53,6 +53,11 @@ public final class AntiDebugPass implements Pass {
                 if (!"main".equals(method.name) || !"([Ljava/lang/String;)V".equals(method.desc)) {
                     continue;
                 }
+                // Abstract/native methods have no Code attribute; inserting
+                // instructions would produce an unloadable class.
+                if ((method.access & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_NATIVE)) != 0) {
+                    continue;
+                }
                 method.instructions.insert(new MethodInsnNode(Opcodes.INVOKESTATIC,
                         guard, "check", "()V", false));
                 instrumented++;
@@ -80,6 +85,8 @@ public final class AntiDebugPass implements Pass {
         constructor.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
                 "java/lang/Object", "<init>", "()V", false));
         constructor.instructions.add(new InsnNode(Opcodes.RETURN));
+        constructor.maxLocals = 1;
+        constructor.maxStack = 1;
         node.methods.add(constructor);
 
         MethodNode check = new MethodNode(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC,
@@ -115,6 +122,8 @@ public final class AntiDebugPass implements Pass {
         check.instructions.add(new InsnNode(Opcodes.ATHROW));
         check.instructions.add(end);
         check.instructions.add(new InsnNode(Opcodes.RETURN));
+        check.maxLocals = 1;
+        check.maxStack = 3;
         node.methods.add(check);
         return node;
     }

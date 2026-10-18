@@ -171,8 +171,22 @@ public final class ControlFlowFlatteningPass implements Pass {
     }
 
     private static int flatten(ClassNode owner, MethodNode method) throws AnalyzerException {
-        Frame<BasicValue>[] frames = new Analyzer<BasicValue>(new BasicInterpreter())
-                .analyze(owner.name, method);
+        // analyzeAndComputeMaxs derives maxStack/maxLocals from the code itself
+        // instead of trusting method.maxStack. Generated methods (decoy methods,
+        // forwarding wrappers, virtualization stubs) may have maxStack == 0, which
+        // makes the plain analyze(...) fail with "Insufficient maximum stack size".
+        Analyzer<BasicValue> analyzer = new Analyzer<BasicValue>(new BasicInterpreter());
+        int previousMaxStack = method.maxStack;
+        Frame<BasicValue>[] frames;
+        try {
+            frames = analyzer.analyzeAndComputeMaxs(owner.name, method);
+        } catch (AnalyzerException e) {
+            // analyzeAndComputeMaxs resets maxStack to -1 before analysing: keep the
+            // method writable when this method is skipped.
+            method.maxStack = Math.max(1, previousMaxStack);
+            throw e;
+        }
+        int analyzedMaxStack = Math.max(1, method.maxStack);
         InsnList instructions = method.instructions;
 
         Set<AbstractInsnNode> leaderSet = new LinkedHashSet<AbstractInsnNode>();
@@ -208,7 +222,12 @@ public final class ControlFlowFlatteningPass implements Pass {
                 return 0;
             }
             Frame<BasicValue> frame = frames[index];
-            for (int slot = 0; slot < slotTypes.length; slot++) {
+            // Frames can describe fewer locals than the method's slot budget (for
+            // example static methods with no local variables); only inspect slots
+            // that actually exist, or Frame#getLocal throws.
+            int frameLocals = frame.getLocals();
+            int localLimit = Math.min(slotTypes.length, frameLocals);
+            for (int slot = 0; slot < localLimit; slot++) {
                 BasicValue value = frame.getLocal(slot);
                 if (value == null || value == BasicValue.UNINITIALIZED_VALUE) {
                     continue;
@@ -347,6 +366,9 @@ public final class ControlFlowFlatteningPass implements Pass {
         }
 
         method.instructions = out;
+        // Dispatcher prologue (state store + tableswitch) and the default
+        // handler (NEW/DUP/LDC) bound the new stack usage at 3 slots.
+        method.maxStack = Math.max(analyzedMaxStack, 3);
         method.tryCatchBlocks = new ArrayList<org.objectweb.asm.tree.TryCatchBlockNode>();
         method.localVariables = null;
         method.visibleLocalVariableAnnotations = null;

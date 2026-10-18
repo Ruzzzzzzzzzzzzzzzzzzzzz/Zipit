@@ -167,3 +167,18 @@ antiLlm:
 
 protection:
   antiDebug: false
+
+# Server-side software authorization gate. When enabled, protected applications
+# show a login / registration / card-activation window at startup (and at the
+# configured entry points) and only run after the authorization server confirms
+# an active per-software membership. Each software has its own card keys and
+# user group; permissions are isolated per software.
+authGate:
+  enabled: false
+  server: "http://127.0.0.1:8090"
+  software: "my-app"
+  title: "My App Authorization"
+  register: true
+  cacheFile: ""                    # default ~/.zipit-auth/<software>.token
+  timeoutMs: 5000
+  entryPoints: []                  # e.g. "com.example.Main#run"

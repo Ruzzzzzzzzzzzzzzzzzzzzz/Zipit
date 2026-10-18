@@ -30,10 +30,29 @@ public final class ConfigLoader {
      * @throws ConfigException if the document is malformed or incomplete
      */
     public static ZipitConfig load(Path file) throws IOException, ConfigException {
+        return load(file, true);
+    }
+
+    /**
+     * Reads a configuration file, optionally allowing {@code input}/{@code output}
+     * to stay unset so a front end (CLI) can supply them as overrides.
+     *
+     * @param file         YAML configuration
+     * @param requirePaths whether {@code input} and {@code output} must be present
+     * @return immutable configuration
+     * @throws IOException     if the file cannot be read
+     * @throws ConfigException if the document is malformed or incomplete
+     */
+    public static ZipitConfig load(Path file, boolean requirePaths) throws IOException, ConfigException {
         String text = new String(Files.readAllBytes(file), StandardCharsets.UTF_8);
+        // Editors on Windows often save UTF-8 with a BOM; the BOM would otherwise
+        // become part of the first key and silently hide that section.
+        if (!text.isEmpty() && text.charAt(0) == '\uFEFF') {
+            text = text.substring(1);
+        }
         Map<String, Object> root = YamlParser.parse(text);
         Path base = file.toAbsolutePath().getParent();
-        return fromMap(root, base);
+        return fromMap(root, base, requirePaths);
     }
 
     /**
@@ -45,6 +64,20 @@ public final class ConfigLoader {
      * @throws ConfigException if required keys are missing or malformed
      */
     public static ZipitConfig fromMap(Map<String, Object> root, Path base) throws ConfigException {
+        return fromMap(root, base, true);
+    }
+
+    /**
+     * Builds a configuration from an already parsed YAML tree.
+     *
+     * @param root         parsed root mapping
+     * @param base         base directory for relative paths, or {@code null} for the CWD
+     * @param requirePaths whether {@code input} and {@code output} must be present
+     * @return immutable configuration
+     * @throws ConfigException if required keys are missing or malformed
+     */
+    public static ZipitConfig fromMap(Map<String, Object> root, Path base, boolean requirePaths)
+            throws ConfigException {
         Map<String, Object> map = normalize(root);
         ZipitConfig.Builder b = new ZipitConfig.Builder();
 
@@ -222,11 +255,22 @@ public final class ConfigLoader {
                 intValue(antiLlm, "maxWrappedMethodsPerClass", 12),
                 bool(antiLlm, "shieldVirtualization", true)));
 
+        Map<String, Object> authGate = normalize(asMap(map.get("authGate")));
+        b.authGate(new ZipitConfig.AuthGateOptions(
+                bool(authGate, "enabled", false),
+                str(authGate, "server", ""),
+                str(authGate, "software", ""),
+                str(authGate, "title", "Software Authorization"),
+                bool(authGate, "register", bool(authGate, "allowRegister", true)),
+                str(authGate, "cacheFile", str(authGate, "cache", "")),
+                intValue(authGate, "timeoutMs", 5000),
+                stringList(authGate, "entryPoints")));
+
         Map<String, Object> protection = normalize(asMap(map.get("protection")));
         b.antiDebug(bool(protection, "antiDebug", bool(map, "antiDebug", false)));
 
-        ZipitConfig config = b.build();
-        return Presets.apply(config);
+        ZipitConfig config = b.build(requirePaths);
+        return Presets.apply(config, requirePaths);
     }
 
     private static Path resolve(Path base, String path) {

@@ -35,6 +35,7 @@ public final class ZipitConfig {
     private final IncrementalOptions incremental;
     private final VirtualizationOptions methodVirtualization;
     private final AntiLlmOptions antiLlm;
+    private final AuthGateOptions authGate;
     private final boolean antiDebug;
 
     private final RenamerOptions renamer;
@@ -71,6 +72,7 @@ public final class ZipitConfig {
         this.incremental = b.incremental;
         this.methodVirtualization = b.methodVirtualization;
         this.antiLlm = b.antiLlm;
+        this.authGate = b.authGate;
         this.antiDebug = b.antiDebug;
         this.renamer = b.renamer;
         this.stringEncryption = b.stringEncryption;
@@ -106,6 +108,7 @@ public final class ZipitConfig {
     public IncrementalOptions incremental() { return incremental; }
     public VirtualizationOptions methodVirtualization() { return methodVirtualization; }
     public AntiLlmOptions antiLlm() { return antiLlm; }
+    public AuthGateOptions authGate() { return authGate; }
     public boolean antiDebug() { return antiDebug; }
     public RenamerOptions renamer() { return renamer; }
     public StringEncryptionOptions stringEncryption() { return stringEncryption; }
@@ -143,6 +146,7 @@ public final class ZipitConfig {
         b.incremental = incremental;
         b.methodVirtualization = methodVirtualization;
         b.antiLlm = antiLlm;
+        b.authGate = authGate;
         b.antiDebug = antiDebug;
         b.renamer = renamer;
         b.stringEncryption = stringEncryption;
@@ -181,6 +185,8 @@ public final class ZipitConfig {
         private IncrementalOptions incremental = new IncrementalOptions(false, "", "zipit-incremental.tsv");
         private VirtualizationOptions methodVirtualization = new VirtualizationOptions(false, 2000, 0);
         private AntiLlmOptions antiLlm = new AntiLlmOptions(false, 2, 2, 1, 12, true);
+        private AuthGateOptions authGate = new AuthGateOptions(false, "", "", "Software Authorization",
+                true, "", 5000, Collections.<String>emptyList());
         private boolean antiDebug = false;
 
         private RenamerOptions renamer = new RenamerOptions(true, "", false, "", true, true, true,
@@ -218,6 +224,7 @@ public final class ZipitConfig {
         public Builder incremental(IncrementalOptions value) { this.incremental = value; return this; }
         public Builder methodVirtualization(VirtualizationOptions value) { this.methodVirtualization = value; return this; }
         public Builder antiLlm(AntiLlmOptions value) { this.antiLlm = value; return this; }
+        public Builder authGate(AuthGateOptions value) { this.authGate = value; return this; }
         public Builder antiDebug(boolean value) { this.antiDebug = value; return this; }
         public Builder renamer(RenamerOptions value) { this.renamer = value; return this; }
         public Builder stringEncryption(StringEncryptionOptions value) { this.stringEncryption = value; return this; }
@@ -231,11 +238,27 @@ public final class ZipitConfig {
         public Builder junk(JunkOptions value) { this.junk = value; return this; }
 
         public ZipitConfig build() throws ConfigException {
-            if (input == null) {
-                throw new ConfigException("Missing required configuration key: input");
-            }
-            if (output == null) {
-                throw new ConfigException("Missing required configuration key: output");
+            return build(true);
+        }
+
+        /**
+         * Builds a configuration, optionally allowing {@code input}/{@code output}
+         * to stay unset. The lenient mode exists for configuration-file loading in
+         * front ends (CLI) that apply {@code -i}/{@code -o} overrides afterwards;
+         * callers must build strictly again before running the engine.
+         *
+         * @param requirePaths whether {@code input} and {@code output} are mandatory
+         * @return immutable configuration
+         * @throws ConfigException when a required path is missing
+         */
+        public ZipitConfig build(boolean requirePaths) throws ConfigException {
+            if (requirePaths) {
+                if (input == null) {
+                    throw new ConfigException("Missing required configuration key: input");
+                }
+                if (output == null) {
+                    throw new ConfigException("Missing required configuration key: output");
+                }
             }
             return new ZipitConfig(this);
         }
@@ -660,5 +683,50 @@ public final class ZipitConfig {
         public boolean enabled() { return enabled; }
         public int methods() { return methods; }
         public int fields() { return fields; }
+    }
+
+    /**
+     * Server-backed authorization gate settings ({@code authGate:} YAML section).
+     *
+     * <p>A protected program calls the injected gate before its {@code main} (and
+     * configured entry points); the gate validates a per-software token against
+     * the authorization server, falling back to an interactive login / register /
+     * card-activation dialog.</p>
+     */
+    public static final class AuthGateOptions {
+        private final boolean enabled;
+        private final String server;
+        private final String software;
+        private final String title;
+        private final boolean allowRegister;
+        private final String cacheFile;
+        private final int timeoutMs;
+        private final List<String> entryPoints;
+
+        public AuthGateOptions(boolean enabled, String server, String software, String title,
+                               boolean allowRegister, String cacheFile, int timeoutMs,
+                               List<String> entryPoints) {
+            this.enabled = enabled;
+            this.server = server == null ? "" : server.trim();
+            this.software = software == null ? "" : software.trim();
+            this.title = title == null || title.trim().isEmpty()
+                    ? "Software Authorization" : title.trim();
+            this.allowRegister = allowRegister;
+            this.cacheFile = cacheFile == null ? "" : cacheFile.trim();
+            this.timeoutMs = Math.max(250, timeoutMs);
+            this.entryPoints = Collections.unmodifiableList(new ArrayList<String>(
+                    entryPoints == null ? Collections.<String>emptyList() : entryPoints));
+        }
+
+        public boolean enabled() { return enabled; }
+        public String server() { return server; }
+        public String software() { return software; }
+        public String title() { return title; }
+        public boolean allowRegister() { return allowRegister; }
+        /** Explicit token cache file; empty means {@code ~/.zipit-auth/<software>.token}. */
+        public String cacheFile() { return cacheFile; }
+        public int timeoutMs() { return timeoutMs; }
+        /** Additional entry points in {@code owner#method} or {@code owner#method#desc} form. */
+        public List<String> entryPoints() { return entryPoints; }
     }
 }

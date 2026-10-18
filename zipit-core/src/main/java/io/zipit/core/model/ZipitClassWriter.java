@@ -1,6 +1,7 @@
 package io.zipit.core.model;
 
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.tree.ClassNode;
 
 /**
@@ -22,8 +23,12 @@ public final class ZipitClassWriter extends ClassWriter {
     }
 
     /**
-     * Serializes a class, preferring computed frames and falling back to
-     * computed max stack/locals when the hierarchy is incomplete.
+     * Serializes a class, preferring computed frames. For class file versions
+     * before 1.6 (major 50) frames are optional, so an incomplete hierarchy may
+     * fall back to computing max stack/locals only. For version 1.6 and newer a
+     * StackMapTable is mandatory: silently dropping frames would produce an
+     * unverifiable class, so the failure is propagated and {@code Jars.write}
+     * reports the class name.
      *
      * @param node      class to serialize
      * @param hierarchy hierarchy resolver
@@ -35,6 +40,9 @@ public final class ZipitClassWriter extends ClassWriter {
             node.accept(writer);
             return writer.toByteArray();
         } catch (RuntimeException first) {
+            if ((node.version & 0xFFFF) >= Opcodes.V1_6) {
+                throw first;
+            }
             ZipitClassWriter writer = new ZipitClassWriter(ClassWriter.COMPUTE_MAXS, hierarchy);
             node.accept(writer);
             return writer.toByteArray();

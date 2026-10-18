@@ -179,6 +179,24 @@ public final class ConfigWriter {
         line(out, 2, "maxWrappedMethodsPerClass", String.valueOf(antiLlm.maxWrappedMethodsPerClass()));
         line(out, 2, "shieldVirtualization", String.valueOf(antiLlm.shieldVirtualization()));
 
+        ZipitConfig.AuthGateOptions gate = config.authGate();
+        out.append("authGate:\n");
+        line(out, 2, "enabled", String.valueOf(gate.enabled()));
+        line(out, 2, "server", quote(gate.server()));
+        line(out, 2, "software", quote(gate.software()));
+        line(out, 2, "title", quote(gate.title()));
+        line(out, 2, "register", String.valueOf(gate.allowRegister()));
+        line(out, 2, "cacheFile", quote(gate.cacheFile()));
+        line(out, 2, "timeoutMs", String.valueOf(gate.timeoutMs()));
+        if (gate.entryPoints().isEmpty()) {
+            out.append("  entryPoints: []\n");
+        } else {
+            out.append("  entryPoints:\n");
+            for (String entry : gate.entryPoints()) {
+                out.append("    - ").append(quote(entry)).append('\n');
+            }
+        }
+
         out.append("protection:\n");
         line(out, 2, "antiDebug", String.valueOf(config.antiDebug()));
 

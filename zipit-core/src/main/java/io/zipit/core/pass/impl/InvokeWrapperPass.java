@@ -137,8 +137,8 @@ public final class InvokeWrapperPass implements Pass {
         method.instructions.add(new MethodInsnNode(Opcodes.INVOKESTATIC, call.owner, call.name, call.desc, call.itf));
         Type returnType = Type.getReturnType(call.desc);
         method.instructions.add(new InsnNode(AsmUtil.returnOpcode(returnType)));
-        method.maxLocals = 0;
-        method.maxStack = 0;
+        method.maxLocals = slot;
+        method.maxStack = slot + 1;
         return method;
     }
 

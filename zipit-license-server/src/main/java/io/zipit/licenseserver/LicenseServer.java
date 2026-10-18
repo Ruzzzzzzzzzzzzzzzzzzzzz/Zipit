@@ -6,6 +6,9 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpsConfigurator;
 import com.sun.net.httpserver.HttpsServer;
 
+import io.zipit.licenseserver.auth.AuthApi;
+import io.zipit.licenseserver.auth.AuthStore;
+
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import java.security.KeyStore;
@@ -29,15 +32,20 @@ import java.util.concurrent.Executors;
  *
  * <p>Endpoints:</p>
  * <ul>
- *   <li>{@code GET /} admin UI</li>
+ *   <li>{@code GET /} admin UI (enterprise licenses + multi-software auth console)</li>
  *   <li>{@code GET /api/health}</li>
  *   <li>{@code GET /api/public-key}</li>
  *   <li>{@code GET|POST /api/licenses}</li>
  *   <li>{@code GET /api/licenses/{id}} / {@code /download} / {@code POST /revoke}</li>
  *   <li>{@code POST /api/validate}</li>
+ *   <li>{@code GET|POST /api/auth/*} client auth API (DESIGN.md section 2.1)</li>
+ *   <li>{@code GET|POST /api/admin/*} admin auth API (DESIGN.md section 2.2)</li>
  * </ul>
  */
 public final class LicenseServer {
+
+    /** Default token lifetime in days (DESIGN.md section 1). */
+    public static final int DEFAULT_TOKEN_DAYS = 7;
 
     private final String host;
     private final int port;
@@ -46,11 +54,14 @@ public final class LicenseServer {
     private final String keystore;
     private final String storepass;
     private final String publicUrl;
+    private final int tokenDays;
+    private final boolean legacyEnabled;
+    private final AuthStore authStore;
     private HttpServer server;
     private ExecutorService executor;
 
     public LicenseServer(String host, int port, LicenseStore store) {
-        this(host, port, store, "", "", "", "");
+        this(host, port, store, "");
     }
 
     public LicenseServer(String host, int port, LicenseStore store, String adminToken) {
@@ -64,6 +75,14 @@ public final class LicenseServer {
 
     public LicenseServer(String host, int port, LicenseStore store, String adminToken,
                          String keystore, String storepass, String publicUrl) {
+        this(host, port, store, adminToken, keystore, storepass, publicUrl,
+                DEFAULT_TOKEN_DAYS, true);
+    }
+
+    /** Full constructor used by {@code Main} (and tests that need a token TTL). */
+    public LicenseServer(String host, int port, LicenseStore store, String adminToken,
+                         String keystore, String storepass, String publicUrl,
+                         int tokenDays, boolean legacyEnabled) {
         this.host = host;
         this.port = port;
         this.store = store;
@@ -71,6 +90,14 @@ public final class LicenseServer {
         this.keystore = keystore == null ? "" : keystore;
         this.storepass = storepass == null ? "" : storepass;
         this.publicUrl = publicUrl == null ? "" : publicUrl;
+        this.tokenDays = tokenDays;
+        this.legacyEnabled = legacyEnabled;
+        try {
+            this.authStore = new AuthStore(store.dataDir(), tokenDays);
+        } catch (Exception e) {
+            throw new IllegalStateException(
+                    "Unable to initialize multi-software auth data: " + e.getMessage(), e);
+        }
     }
 
     /** Public base URL used for client configuration snippets. */
@@ -85,6 +112,21 @@ public final class LicenseServer {
         String scheme = keystore.isEmpty() ? "http" : "https";
         String displayHost = "0.0.0.0".equals(host) ? "127.0.0.1" : host;
         return scheme + "://" + displayHost + ":" + port();
+    }
+
+    /** Persistent multi-software authorization store (users/software/cards/memberships). */
+    public AuthStore authStore() {
+        return authStore;
+    }
+
+    /** Whether the legacy RSA enterprise license routes are enabled. */
+    public boolean legacyEnabled() {
+        return legacyEnabled;
+    }
+
+    /** Configured token lifetime in days. */
+    public int tokenDays() {
+        return tokenDays;
     }
 
     /** Starts the server and returns the bound port (useful with port 0). */
@@ -134,31 +176,40 @@ public final class LicenseServer {
                         "{\"publicUrl\":" + Json.quote(publicUrl())
                                 + ",\"version\":\"1.0.0\""
                                 + ",\"validateEndpoint\":" + Json.quote(publicUrl() + "/api/validate")
+                                + ",\"adminTokenRequired\":" + Json.bool(!adminToken.isEmpty())
+                                + ",\"auth\":true"
+                                + ",\"tokenDays\":" + tokenDays
+                                + ",\"legacy\":" + Json.bool(legacyEnabled)
+                                + ",\"software\":" + authStore.softwareList().size()
                                 + "}");
             }
         });
-        server.createContext("/api/public-key", new HttpHandler() {
-            @Override
-            public void handle(HttpExchange exchange) throws IOException {
-                try {
-                    send(exchange, 200, "text/plain; charset=UTF-8", store.publicKeyPem());
-                } catch (Exception e) {
-                    send(exchange, 500, "text/plain; charset=UTF-8", e.getMessage());
+        server.createContext("/api/auth", new AuthApi.ClientHandler(authStore));
+        server.createContext("/api/admin", new AuthApi.AdminHandler(authStore, adminToken));
+        if (legacyEnabled) {
+            server.createContext("/api/public-key", new HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    try {
+                        send(exchange, 200, "text/plain; charset=UTF-8", store.publicKeyPem());
+                    } catch (Exception e) {
+                        send(exchange, 500, "text/plain; charset=UTF-8", e.getMessage());
+                    }
                 }
-            }
-        });
-        server.createContext("/api/licenses", new HttpHandler() {
-            @Override
-            public void handle(HttpExchange exchange) throws IOException {
-                handleLicenses(exchange);
-            }
-        });
-        server.createContext("/api/validate", new HttpHandler() {
-            @Override
-            public void handle(HttpExchange exchange) throws IOException {
-                handleValidate(exchange);
-            }
-        });
+            });
+            server.createContext("/api/licenses", new HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    handleLicenses(exchange);
+                }
+            });
+            server.createContext("/api/validate", new HttpHandler() {
+                @Override
+                public void handle(HttpExchange exchange) throws IOException {
+                    handleValidate(exchange);
+                }
+            });
+        }
         server.start();
         return server.getAddress().getPort();
     }

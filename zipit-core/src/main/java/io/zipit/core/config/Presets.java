@@ -18,13 +18,26 @@ public final class Presets {
     }
 
     public static ZipitConfig apply(ZipitConfig base) throws ConfigException {
+        return apply(base, true);
+    }
+
+    /**
+     * Applies the preset named in the configuration, optionally tolerating a
+     * configuration without {@code input}/{@code output} (CLI override loading).
+     */
+    public static ZipitConfig apply(ZipitConfig base, boolean requirePaths) throws ConfigException {
         if (base.preset() == null || base.preset().trim().isEmpty()) {
             return base;
         }
-        return apply(base, base.preset());
+        return apply(base, base.preset(), requirePaths);
     }
 
     public static ZipitConfig apply(ZipitConfig base, String preset) throws ConfigException {
+        return apply(base, preset, true);
+    }
+
+    public static ZipitConfig apply(ZipitConfig base, String preset, boolean requirePaths)
+            throws ConfigException {
         String name = preset == null ? "" : preset.trim().toLowerCase(Locale.ROOT);
         if (name.isEmpty() || "default".equals(name) || "none".equals(name)) {
             return base;
@@ -86,7 +99,7 @@ public final class Presets {
                     + " (expected library, spring-boot, jackson, service-loader, micronaut or aggressive)");
         }
         b.preset(name);
-        return b.build();
+        return b.build(requirePaths);
     }
 
     private static List<String> dedupe(List<String> values) {

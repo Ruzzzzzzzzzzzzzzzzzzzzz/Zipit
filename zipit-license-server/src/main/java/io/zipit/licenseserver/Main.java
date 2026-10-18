@@ -23,6 +23,8 @@ public final class Main {
                 ? "" : System.getenv("ZIPIT_PUBLIC_URL").trim();
         int autoRenewDays = 0;
         int renewExtensionDays = 365;
+        int tokenDays = LicenseServer.DEFAULT_TOKEN_DAYS;
+        boolean noLegacy = false;
         boolean open = false;
 
         for (int i = 0; i < args.length; i++) {
@@ -45,6 +47,10 @@ public final class Main {
                 autoRenewDays = Integer.parseInt(args[++i]);
             } else if ("--renew-extension-days".equals(arg) && i + 1 < args.length) {
                 renewExtensionDays = Integer.parseInt(args[++i]);
+            } else if ("--token-days".equals(arg) && i + 1 < args.length) {
+                tokenDays = Integer.parseInt(args[++i]);
+            } else if ("--no-legacy".equals(arg)) {
+                noLegacy = true;
             } else if ("--open".equals(arg)) {
                 open = true;
             } else if ("--help".equals(arg) || "-h".equals(arg)) {
@@ -65,7 +71,7 @@ public final class Main {
                     + autoRenewDays + " days.");
         }
         LicenseServer server = new LicenseServer(host, port, store, adminToken,
-                keystore, storepass, publicUrl);
+                keystore, storepass, publicUrl, tokenDays, !noLegacy);
         int bound = server.start();
         Runtime.getRuntime().addShutdownHook(new Thread(server::stop));
 
@@ -75,11 +81,18 @@ public final class Main {
         System.out.println("  ZIPIT LICENSE SERVER");
         System.out.println("  --------------------");
         System.out.println("  Admin UI  : " + url);
+        System.out.println("  Auth UI   : " + url
+                + "  (same admin.html: Overview / Software / Cards / Users / License tabs)");
+        System.out.println("  Client cfg: authGate.server=" + clientUrl
+                + "  authGate.software=<softwareId>");
         System.out.println("  Client URL: " + clientUrl);
         System.out.println("  Data dir  : " + dataDir);
+        System.out.println("  Auth data : " + dataDir.resolve("auth"));
         System.out.println("  Public key: " + dataDir.resolve("public.pem"));
         System.out.println("  Bind      : " + host + ":" + bound);
+        System.out.println("  Token TTL : " + tokenDays + " day(s)");
         System.out.println("  Admin auth: " + (adminToken.isEmpty() ? "disabled" : "X-Admin-Token required"));
+        System.out.println("  Legacy RSA: " + (noLegacy ? "disabled (--no-legacy)" : "enabled"));
         System.out.println("  Stop with Ctrl+C.");
         System.out.println();
         System.out.println("  Client configuration (give clients your address):");
@@ -121,6 +134,8 @@ public final class Main {
         System.out.println("  --public-url <url>     public base URL shown to clients (behind a proxy)");
         System.out.println("  --auto-renew-days <n>  renew active licenses expiring within n days");
         System.out.println("  --renew-extension-days <n>  extension applied by auto-renew (default 365)");
+        System.out.println("  --token-days <n>  multi-software auth token lifetime in days (default 7)");
+        System.out.println("  --no-legacy    do not serve the legacy RSA license routes");
         System.out.println("  --open         open the admin page in a browser");
         System.out.println("  Env ZIPIT_LICENSE_TOKEN provides the admin token as well.");
         System.out.println("  Env ZIPIT_PUBLIC_URL provides the public base URL as well.");

@@ -134,6 +134,9 @@ public final class FlowObfuscationPass implements Pass {
         prelude.add(new JumpInsnNode(Opcodes.GOTO, real));
         prelude.add(real);
         method.instructions.insert(prelude);
+        // The predicate pushes two values (field + constant) on the stack; keep
+        // maxStack consistent for passes that analyze before frames are computed.
+        method.maxStack = Math.max(method.maxStack, 2);
     }
 
     private static int invertBranches(MethodNode method, boolean all) {
@@ -199,13 +202,14 @@ public final class FlowObfuscationPass implements Pass {
             clinit = new MethodNode(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
             clinit.instructions.add(new InsnNode(Opcodes.RETURN));
             clinit.maxLocals = 0;
-            clinit.maxStack = 0;
+            clinit.maxStack = 1;
             node.methods.add(clinit);
         }
         InsnList init = new InsnList();
         AsmUtil.pushInt(init, expected);
         init.add(new FieldInsnNode(Opcodes.PUTSTATIC, node.name, fieldName, "I"));
         clinit.instructions.insert(init);
+        clinit.maxStack = Math.max(clinit.maxStack, 1);
     }
 
     private static boolean containsJsrOrRet(MethodNode method) {

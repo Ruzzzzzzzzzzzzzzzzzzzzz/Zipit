@@ -62,6 +62,8 @@ public final class ReferenceObfuscationPass implements Pass {
         int fields = 0;
         int constructors = 0;
         int classes = 0;
+        int versionUpgraded = 0;
+        int indySkipped = 0;
         Map<String, ClassNode> helpers = new java.util.LinkedHashMap<String, ClassNode>();
         for (ClassNode node : context.classes().classes().values()) {
             if (context.classes().isGenerated(node.name) || context.classes().isFrozen(node.name)) {
@@ -70,34 +72,51 @@ public final class ReferenceObfuscationPass implements Pass {
             if (!context.rules().transformClass(node)) {
                 continue;
             }
+            // invokedynamic needs class file version >= 51 (constant tags 15/18).
+            // Legacy classes are upgraded unless they still use JSR/RET, which is
+            // illegal in version 51+ class files; those keep direct references.
+            boolean rewriteIndy = true;
+            if ((node.version & 0xFFFF) < Opcodes.V1_7) {
+                if (AsmUtil.containsJsrOrRet(node)) {
+                    rewriteIndy = false;
+                    indySkipped++;
+                    context.log().debug("reference-obfuscation: skipping invokedynamic rewriting for legacy class %s "
+                            + "(JSR/RET present, class file version %d)", node.name, node.version & 0xFFFF);
+                } else {
+                    node.version = Opcodes.V1_7;
+                    versionUpgraded++;
+                }
+            }
             int before = statics + virtuals + fields + constructors;
             if (options.constructors()) {
                 constructors += rewriteConstructors(context, node, helpers);
             }
-            for (MethodNode method : node.methods) {
-                if (method.instructions == null) {
-                    continue;
-                }
-                for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; ) {
-                    AbstractInsnNode next = insn.getNext();
-                    if (insn instanceof MethodInsnNode) {
-                        MethodInsnNode call = (MethodInsnNode) insn;
-                        if (call.getOpcode() == Opcodes.INVOKESTATIC && options.staticCalls()) {
-                            if (rewriteStatic(context, node, method, call, helper)) {
-                                statics++;
-                            }
-                        } else if ((call.getOpcode() == Opcodes.INVOKEVIRTUAL
-                                || call.getOpcode() == Opcodes.INVOKEINTERFACE) && options.virtualCalls()) {
-                            if (rewriteVirtual(context, node, method, call, helper)) {
-                                virtuals++;
-                            }
-                        }
-                    } else if (insn instanceof FieldInsnNode && options.fields()) {
-                        if (rewriteField(context, node, method, (FieldInsnNode) insn, helper)) {
-                            fields++;
-                        }
+            if (rewriteIndy) {
+                for (MethodNode method : node.methods) {
+                    if (method.instructions == null) {
+                        continue;
                     }
-                    insn = next;
+                    for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; ) {
+                        AbstractInsnNode next = insn.getNext();
+                        if (insn instanceof MethodInsnNode) {
+                            MethodInsnNode call = (MethodInsnNode) insn;
+                            if (call.getOpcode() == Opcodes.INVOKESTATIC && options.staticCalls()) {
+                                if (rewriteStatic(context, node, method, call, helper)) {
+                                    statics++;
+                                }
+                            } else if ((call.getOpcode() == Opcodes.INVOKEVIRTUAL
+                                    || call.getOpcode() == Opcodes.INVOKEINTERFACE) && options.virtualCalls()) {
+                                if (rewriteVirtual(context, node, method, call, helper)) {
+                                    virtuals++;
+                                }
+                            }
+                        } else if (insn instanceof FieldInsnNode && options.fields()) {
+                            if (rewriteField(context, node, method, (FieldInsnNode) insn, helper)) {
+                                fields++;
+                            }
+                        }
+                        insn = next;
+                    }
                 }
             }
             if (statics + virtuals + fields + constructors > before) {
@@ -113,8 +132,14 @@ public final class ReferenceObfuscationPass implements Pass {
         context.stats().add("references.constructors", constructors);
         context.stats().add("references.indy", statics + virtuals + fields);
         context.stats().add("references.classes", classes);
+        context.stats().add("references.versionUpgraded", versionUpgraded);
+        context.stats().add("references.skippedLegacyClasses", indySkipped);
         context.log().info("reference-obfuscation: %d static, %d virtual, %d field, %d constructor references across %d classes",
                 statics, virtuals, fields, constructors, classes);
+        if (versionUpgraded > 0 || indySkipped > 0) {
+            context.log().info("reference-obfuscation: upgraded %d legacy class(es) to class file version 51, "
+                    + "skipped invokedynamic in %d legacy class(es) with JSR/RET", versionUpgraded, indySkipped);
+        }
     }
 
     private static int rewriteConstructors(PassContext context, ClassNode caller,
@@ -212,6 +237,8 @@ public final class ReferenceObfuscationPass implements Pass {
                 factory.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
                         owner, "<init>", constructor.desc, false));
                 factory.instructions.add(new InsnNode(Opcodes.ARETURN));
+                factory.maxLocals = slot;
+                factory.maxStack = slot + 2;
                 helper.methods.add(factory);
 
                 method.instructions.remove(insn);
@@ -245,6 +272,8 @@ public final class ReferenceObfuscationPass implements Pass {
         constructor.instructions.add(new MethodInsnNode(Opcodes.INVOKESPECIAL,
                 "java/lang/Object", "<init>", "()V", false));
         constructor.instructions.add(new InsnNode(Opcodes.RETURN));
+        constructor.maxLocals = 1;
+        constructor.maxStack = 1;
         helper.methods.add(constructor);
         return helper;
     }

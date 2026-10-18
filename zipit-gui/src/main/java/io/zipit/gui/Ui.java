@@ -1,412 +1,952 @@
 package io.zipit.gui;
 
-import com.formdev.flatlaf.FlatDarkLaf;
-import com.formdev.flatlaf.FlatLightLaf;
-
 import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
 import javax.swing.Icon;
 import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
-import javax.swing.SwingUtilities;
+import javax.swing.JSpinner;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.SpinnerModel;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Container;
+import java.awt.Cursor;
+import java.awt.Dimension;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Insets;
 import java.awt.RenderingHints;
-import java.awt.Window;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.awt.image.BufferedImage;
+import java.awt.geom.RoundRectangle2D;
+import java.util.function.Supplier;
 
-/** Shared visual helpers for the Zipit desktop client. */
+/** Shared visual toolkit: typography, controls, layout and painted primitives. */
 final class Ui {
-
-    static final Color ACCENT = new Color(0x3B82F6);
-    static final Color ACCENT_DARK = new Color(0x2563EB);
-    static final Color PURPLE = new Color(0x7C3AED);
-    static final Color TEAL = new Color(0x0D9488);
-    static final Color SUCCESS = new Color(0x10B981);
-    static final Color WARNING = new Color(0xF59E0B);
-    static final Color DANGER = new Color(0xEF4444);
-    static final Color INDIGO = new Color(0x6366F1);
-
-    private static boolean dark;
 
     private Ui() {
     }
 
-    static void install() {
-        FlatLightLaf.setup();
-        Font base = new Font("Segoe UI", Font.PLAIN, 13);
-        UIManager.put("defaultFont", base);
-        UIManager.put("Component.focusWidth", 1);
-        UIManager.put("Component.focusColor", ACCENT);
-        UIManager.put("Button.arc", 12);
-        UIManager.put("Component.arc", 12);
-        UIManager.put("TextComponent.arc", 10);
-        UIManager.put("ScrollBar.width", 10);
-        UIManager.put("ScrollBar.thumbArc", 999);
-        UIManager.put("ScrollBar.thumbInsets", new Insets(2, 2, 2, 2));
-        UIManager.put("Tree.rowHeight", 24);
-        UIManager.put("Tree.paintLines", false);
-        UIManager.put("Tree.showHorizontalLines", false);
-    }
+    // ------------------------------------------------------------------
+    // typography
+    // ------------------------------------------------------------------
 
-    static boolean isDark() {
-        return dark;
-    }
-
-    static void toggleTheme(Window window) {
-        dark = !dark;
-        try {
-            if (dark) {
-                FlatDarkLaf.setup();
-            } else {
-                FlatLightLaf.setup();
-            }
-            UIManager.put("defaultFont", new Font("Segoe UI", Font.PLAIN, 13));
-            UIManager.put("Component.focusColor", ACCENT);
-        } catch (Exception ignored) {
-        }
-        if (window != null) {
-            SwingUtilities.updateComponentTreeUI(window);
-            window.repaint();
-        }
-    }
-
-    static Color pageBackground() {
-        return dark ? new Color(0x0B1220) : new Color(0xF3F6FC);
-    }
-
-    static Color surface() {
-        return dark ? new Color(0x111827) : Color.WHITE;
-    }
-
-    static Color sidebarColor() {
-        return dark ? new Color(0x0F172A) : Color.WHITE;
-    }
-
-    static Color line() {
-        return dark ? new Color(0x243041) : new Color(0xE2E8F0);
-    }
-
-    static Color ink() {
-        return dark ? new Color(0xE5E7EB) : new Color(0x0F172A);
-    }
-
-    static Color mutedInk() {
-        return dark ? new Color(0x94A3B8) : new Color(0x64748B);
-    }
-
-    static Color accentSoft() {
-        return dark ? new Color(0x1E293B) : new Color(0xE8F0FE);
-    }
-
-    static JLabel h1(String text) {
-        JLabel label = new InkLabel(text);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 26f));
+    static JLabel title(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.TEXT);
+        label.setFont(Theme.font(Font.BOLD, 26f));
         return label;
     }
 
     static JLabel h2(String text) {
-        JLabel label = new InkLabel(text);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 15.5f));
+        JLabel label = new ThemeLabel(text, () -> Theme.TEXT);
+        label.setFont(Theme.font(Font.BOLD, 17f));
+        return label;
+    }
+
+    static JLabel h3(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.TEXT);
+        label.setFont(Theme.font(Font.BOLD, 15f));
+        return label;
+    }
+
+    static JLabel body(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.TEXT);
+        label.setFont(Theme.font(Font.PLAIN, 14f));
+        return label;
+    }
+
+    static JLabel bold(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.TEXT);
+        label.setFont(Theme.font(Font.BOLD, 14f));
         return label;
     }
 
     static JLabel muted(String text) {
-        return new MutedLabel(text);
+        JLabel label = new ThemeLabel(text, () -> Theme.MUTED);
+        label.setFont(Theme.font(Font.PLAIN, 13f));
+        return label;
+    }
+
+    static JLabel mutedWrapped(String text, int width) {
+        JLabel label = new ThemeLabel(htmlWrap(text, width), () -> Theme.MUTED);
+        label.setFont(Theme.font(Font.PLAIN, 13f));
+        return label;
+    }
+
+    static JLabel small(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.MUTED);
+        label.setFont(Theme.font(Font.PLAIN, 12f));
+        return label;
+    }
+
+    static JLabel faint(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.FAINT);
+        label.setFont(Theme.font(Font.PLAIN, 12f));
+        return label;
+    }
+
+    static JLabel overline(String text) {
+        JLabel label = new ThemeLabel(text.toUpperCase(java.util.Locale.ROOT), () -> Theme.MUTED);
+        label.setFont(Theme.font(Font.BOLD, 12f));
+        return label;
+    }
+
+    static JLabel value(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.TEXT);
+        label.setFont(Theme.font(Font.BOLD, 26f));
+        return label;
+    }
+
+    static JLabel mono(String text) {
+        JLabel label = new ThemeLabel(text, () -> Theme.TEXT);
+        label.setFont(Theme.mono(13f));
+        return label;
+    }
+
+    static JLabel colored(String text, Supplier<Color> color, float size, int style) {
+        JLabel label = new ThemeLabel(text, color);
+        label.setFont(Theme.font(style, size));
+        return label;
+    }
+
+    private static String htmlWrap(String text, int width) {
+        return "<html><body style='width:" + width + "px'>" + escape(text) + "</body></html>";
+    }
+
+    private static String escape(String text) {
+        return text == null ? "" : text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    }
+
+    // ------------------------------------------------------------------
+    // buttons
+    // ------------------------------------------------------------------
+
+    enum ButtonStyle {
+        PRIMARY, SECONDARY, GHOST, DANGER, LINK
     }
 
     static JButton primary(String text) {
-        JButton button = new JButton(text);
-        button.putClientProperty("JButton.buttonType", "roundRect");
-        button.setFont(button.getFont().deriveFont(Font.BOLD, 13f));
-        button.setBackground(ACCENT);
-        button.setForeground(Color.WHITE);
-        button.setOpaque(true);
-        button.setBorder(BorderFactory.createEmptyBorder(9, 18, 9, 18));
+        return new FlatButton(text, null, ButtonStyle.PRIMARY);
+    }
+
+    static JButton primary(String text, String icon) {
+        return new FlatButton(text, icon, ButtonStyle.PRIMARY);
+    }
+
+    static JButton button(String text) {
+        return new FlatButton(text, null, ButtonStyle.SECONDARY);
+    }
+
+    static JButton button(String text, String icon) {
+        return new FlatButton(text, icon, ButtonStyle.SECONDARY);
+    }
+
+    static JButton ghost(String text) {
+        return new FlatButton(text, null, ButtonStyle.GHOST);
+    }
+
+    static JButton ghost(String text, String icon) {
+        return new FlatButton(text, icon, ButtonStyle.GHOST);
+    }
+
+    static JButton danger(String text) {
+        return new FlatButton(text, null, ButtonStyle.DANGER);
+    }
+
+    static JButton danger(String text, String icon) {
+        return new FlatButton(text, icon, ButtonStyle.DANGER);
+    }
+
+    static JButton link(String text) {
+        return new FlatButton(text, null, ButtonStyle.LINK);
+    }
+
+    static JButton link(String text, String icon) {
+        return new FlatButton(text, icon, ButtonStyle.LINK);
+    }
+
+    static JButton iconButton(String icon, String tooltip) {
+        return iconButton(icon, tooltip, 36);
+    }
+
+    static JButton iconButton(String icon, String tooltip, int size) {
+        FlatButton button = new FlatButton("", icon, ButtonStyle.GHOST);
+        button.setPreferredSize(new Dimension(Theme.px(size), Theme.px(size)));
+        button.setMinimumSize(button.getPreferredSize());
+        button.setMaximumSize(button.getPreferredSize());
+        button.setIconOnly(true);
+        button.setFocusable(false);
+        hint(button, tooltip);
         return button;
     }
 
-    static JButton secondary(String text) {
-        JButton button = new JButton(text);
-        button.putClientProperty("JButton.buttonType", "roundRect");
-        button.setFont(button.getFont().deriveFont(Font.PLAIN, 13f));
-        return button;
+    static void hint(JComponent component, String text) {
+        component.setToolTipText(text == null ? null : "<html>" + escape(text) + "</html>");
     }
 
-    static JButton nav(String text) {
-        return nav(text, null);
+    // ------------------------------------------------------------------
+    // text controls
+    // ------------------------------------------------------------------
+
+    static JTextField field(int columns) {
+        JTextField field = new JTextField(columns);
+        styleField(field);
+        return field;
     }
 
-    static JButton nav(String text, Icon icon) {
-        JButton button = new JButton(text);
-        button.setHorizontalAlignment(JButton.LEFT);
-        button.setIcon(icon);
-        button.setIconTextGap(12);
-        button.setFont(button.getFont().deriveFont(Font.PLAIN, 13f));
-        button.setBorder(BorderFactory.createEmptyBorder(10, 14, 10, 14));
-        button.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, 42));
-        button.setPreferredSize(new java.awt.Dimension(200, 42));
-        button.putClientProperty("JButton.buttonType", "roundRect");
-        return button;
+    static JTextField field(int columns, String placeholder) {
+        JTextField field = field(columns);
+        placeholder(field, placeholder);
+        return field;
+    }
+
+    static void placeholder(JTextField field, String text) {
+        field.putClientProperty("JTextField.placeholderText", text);
+    }
+
+    static void placeholder(JTextArea area, String text) {
+        area.putClientProperty("JTextField.placeholderText", text);
+        area.setToolTipText(text);
     }
 
     static void styleField(JComponent component) {
         component.putClientProperty("JComponent.roundRect", true);
+        component.setFont(Theme.font(Font.PLAIN, 14f));
     }
 
-    /** Prevents BoxLayout from stretching single-line controls vertically. */
-    static void constrainHeight(JComponent component) {
-        if (component instanceof javax.swing.JTextField
-                || component instanceof javax.swing.JSpinner
-                || component instanceof javax.swing.JComboBox) {
-            java.awt.Dimension preferred = component.getPreferredSize();
-            int height = Math.max(30, preferred.height);
-            component.setMaximumSize(new java.awt.Dimension(Integer.MAX_VALUE, height));
-            component.setPreferredSize(new java.awt.Dimension(preferred.width, height));
+    static JTextArea editor(int rows, int columns) {
+        ThemeArea area = new ThemeArea(rows, columns, false);
+        area.setFont(Theme.font(Font.PLAIN, 14f));
+        area.setLineWrap(true);
+        area.setWrapStyleWord(true);
+        return area;
+    }
+
+    static JTextArea code(int rows, int columns) {
+        ThemeArea area = new ThemeArea(rows, columns, true);
+        area.setFont(Theme.mono(13f));
+        area.setLineWrap(false);
+        return area;
+    }
+
+    static JComboBox<String> combo(String... items) {
+        JComboBox<String> combo = new JComboBox<String>(items);
+        combo.setFont(Theme.font(Font.PLAIN, 14f));
+        combo.putClientProperty("JComponent.roundRect", true);
+        return combo;
+    }
+
+    static JSpinner spinner(SpinnerModel model) {
+        JSpinner spinner = new JSpinner(model);
+        spinner.setFont(Theme.font(Font.PLAIN, 14f));
+        spinner.putClientProperty("JComponent.roundRect", true);
+        JComponent editor = spinner.getEditor();
+        if (editor instanceof JSpinner.DefaultEditor) {
+            ((JSpinner.DefaultEditor) editor).getTextField().setFont(Theme.font(Font.PLAIN, 14f));
         }
+        return spinner;
     }
 
-    static JScrollPane scroll(Component component) {
-        JScrollPane pane = new JScrollPane(component);
+    static JScrollPane scroll(Component content) {
+        JScrollPane pane = new JScrollPane(content);
         pane.setBorder(BorderFactory.createEmptyBorder());
-        pane.getVerticalScrollBar().setUnitIncrement(16);
+        pane.setOpaque(false);
+        pane.getViewport().setOpaque(false);
+        pane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        pane.getVerticalScrollBar().setUnitIncrement(Theme.px(18));
+        pane.getHorizontalScrollBar().setUnitIncrement(Theme.px(18));
         return pane;
     }
 
-    static JPanel card(String title, String subtitle, JComponent body) {
-        CardPanel card = new CardPanel();
-        card.setLayout(new java.awt.BorderLayout(0, 10));
-        card.setBorder(BorderFactory.createEmptyBorder(18, 20, 18, 20));
-        JPanel header = new JPanel();
-        header.setOpaque(false);
-        header.setLayout(new javax.swing.BoxLayout(header, javax.swing.BoxLayout.Y_AXIS));
-        JLabel heading = h2(title);
-        header.add(heading);
-        if (subtitle != null && !subtitle.isEmpty()) {
-            header.add(javax.swing.Box.createVerticalStrut(2));
-            header.add(muted(subtitle));
-        }
-        card.add(header, java.awt.BorderLayout.NORTH);
-        card.add(body, java.awt.BorderLayout.CENTER);
-        return card;
+    static JScrollPane scrollRounded(Component content) {
+        JScrollPane pane = new JScrollPane(content);
+        pane.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Theme.BORDER, 1, true),
+                BorderFactory.createEmptyBorder(4, 4, 4, 4)));
+        pane.getVerticalScrollBar().setUnitIncrement(Theme.px(18));
+        pane.getVerticalScrollBar().setOpaque(false);
+        pane.getViewport().setOpaque(true);
+        JScrollBar bar = pane.getVerticalScrollBar();
+        bar.setUnitIncrement(Theme.px(18));
+        return pane;
     }
 
-    static JPanel horizontal(int gap, Component... components) {
+    // ------------------------------------------------------------------
+    // layout helpers
+    // ------------------------------------------------------------------
+
+    static JPanel row(int gap, Component... components) {
         JPanel panel = new JPanel();
         panel.setOpaque(false);
-        panel.setLayout(new javax.swing.BoxLayout(panel, javax.swing.BoxLayout.X_AXIS));
+        panel.setLayout(new BoxLayout(panel, BoxLayout.X_AXIS));
         for (int i = 0; i < components.length; i++) {
-            if (i > 0) {
-                panel.add(javax.swing.Box.createHorizontalStrut(gap));
+            if (i > 0 && gap > 0) {
+                panel.add(Box.createHorizontalStrut(gap));
             }
-            panel.add(components[i]);
+            Component component = components[i];
+            if (component != null) {
+                panel.add(component);
+            }
         }
         return panel;
     }
 
-    static JPanel vertical(int gap, Component... components) {
+    static JPanel col(int gap, Component... components) {
         JPanel panel = new JPanel();
         panel.setOpaque(false);
-        panel.setLayout(new javax.swing.BoxLayout(panel, javax.swing.BoxLayout.Y_AXIS));
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         for (int i = 0; i < components.length; i++) {
-            if (i > 0) {
-                panel.add(javax.swing.Box.createVerticalStrut(gap));
+            if (i > 0 && gap > 0) {
+                panel.add(Box.createVerticalStrut(gap));
             }
-            panel.add(components[i]);
+            Component component = components[i];
+            if (component == null) {
+                continue;
+            }
+            if (component instanceof JComponent) {
+                ((JComponent) component).setAlignmentX(Component.LEFT_ALIGNMENT);
+            }
+            panel.add(component);
         }
         return panel;
     }
+
+    static Component vgap(int height) {
+        return Box.createVerticalStrut(height);
+    }
+
+    static Component hgap(int width) {
+        return Box.createHorizontalStrut(width);
+    }
+
+    static Component vglue() {
+        return Box.createVerticalGlue();
+    }
+
+    static Component hglue() {
+        return Box.createHorizontalGlue();
+    }
+
+    /** 1px themed hairline. */
+    static JComponent hline() {
+        JComponent line = new JComponent() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                g.setColor(Theme.BORDER);
+                g.fillRect(0, 0, getWidth(), 1);
+            }
+
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(1, 1);
+            }
+
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(Integer.MAX_VALUE, 1);
+            }
+        };
+        line.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return line;
+    }
+
+    static JPanel fieldGroup(String caption, JComponent field) {
+        JPanel panel = new JPanel();
+        panel.setOpaque(false);
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
+        JLabel label = muted(caption);
+        label.setFont(Theme.font(Font.BOLD, 13f));
+        label.setAlignmentX(Component.LEFT_ALIGNMENT);
+        field.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.add(label);
+        panel.add(Box.createVerticalStrut(5));
+        panel.add(field);
+        return panel;
+    }
+
+    static JPanel inlineField(String caption, JComponent field, int captionWidth) {
+        JPanel panel = new JPanel(new java.awt.BorderLayout(10, 0));
+        panel.setOpaque(false);
+        JLabel label = muted(caption);
+        label.setPreferredSize(new Dimension(captionWidth, 26));
+        panel.add(label, java.awt.BorderLayout.WEST);
+        panel.add(field, java.awt.BorderLayout.CENTER);
+        return panel;
+    }
+
+    static JPanel page() {
+        JPanel page = new JPanel(new java.awt.BorderLayout(0, 18));
+        page.setOpaque(false);
+        page.setBorder(BorderFactory.createEmptyBorder(22, 26, 26, 26));
+        return page;
+    }
+
+    /**
+     * Panel used as the scrollable body of every page. It implements
+     * {@link javax.swing.Scrollable} with viewport-width tracking so long labels
+     * can never widen the page beyond the window and force a clipped layout.
+     */
+    static JPanel pageBody() {
+        return new VStackPanel();
+    }
+
+    /**
+     * Deterministic vertical stack: every visible child gets the full container
+     * width and its preferred height. Unlike BoxLayout this cannot leave rows
+     * centred or half-width depending on their maximum size.
+     */
+    static final class VStackPanel extends JPanel implements javax.swing.Scrollable {
+
+        VStackPanel() {
+            setOpaque(false);
+            setLayout(new VStackLayout());
+        }
+
+        @Override
+        public Dimension getPreferredScrollableViewportSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public int getScrollableUnitIncrement(java.awt.Rectangle visibleRect,
+                                               int orientation, int direction) {
+            return Theme.px(18);
+        }
+
+        @Override
+        public int getScrollableBlockIncrement(java.awt.Rectangle visibleRect,
+                                               int orientation, int direction) {
+            return Theme.px(90);
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportWidth() {
+            return true;
+        }
+
+        @Override
+        public boolean getScrollableTracksViewportHeight() {
+            return false;
+        }
+    }
+
+    /** Stretch-to-width vertical flow layout used by page and card bodies. */
+    static final class VStackLayout implements java.awt.LayoutManager {
+
+        @Override
+        public void addLayoutComponent(String name, Component comp) {
+        }
+
+        @Override
+        public void removeLayoutComponent(Component comp) {
+        }
+
+        @Override
+        public Dimension preferredLayoutSize(Container parent) {
+            synchronized (parent.getTreeLock()) {
+                Insets insets = parent.getInsets();
+                int width = 0;
+                int height = 0;
+                int count = 0;
+                for (Component child : parent.getComponents()) {
+                    if (!child.isVisible()) {
+                        continue;
+                    }
+                    Dimension size = child.getPreferredSize();
+                    width = Math.max(width, size.width);
+                    height += size.height;
+                    count++;
+                }
+                return new Dimension(insets.left + insets.right + width,
+                        insets.top + insets.bottom + height);
+            }
+        }
+
+        @Override
+        public Dimension minimumLayoutSize(Container parent) {
+            synchronized (parent.getTreeLock()) {
+                Insets insets = parent.getInsets();
+                int width = 0;
+                int height = 0;
+                for (Component child : parent.getComponents()) {
+                    if (!child.isVisible()) {
+                        continue;
+                    }
+                    Dimension size = child.getMinimumSize();
+                    width = Math.max(width, size.width);
+                    height += size.height;
+                }
+                return new Dimension(insets.left + insets.right + width,
+                        insets.top + insets.bottom + height);
+            }
+        }
+
+        @Override
+        public void layoutContainer(Container parent) {
+            synchronized (parent.getTreeLock()) {
+                Insets insets = parent.getInsets();
+                int width = Math.max(0, parent.getWidth() - insets.left - insets.right);
+                int y = insets.top;
+                for (Component child : parent.getComponents()) {
+                    if (!child.isVisible()) {
+                        continue;
+                    }
+                    int height = child.getPreferredSize().height;
+                    child.setBounds(insets.left, y, width, height);
+                    y += height;
+                }
+            }
+        }
+    }
+
+    /** Scroll wrapper used for every page of the content area. */
+    static JScrollPane pageScroll(JComponent content) {
+        JScrollPane pane = scroll(content);
+        pane.getVerticalScrollBar().setBlockIncrement(Theme.px(80));
+        return pane;
+    }
+
+    static JPanel transparent(int gap) {
+        JPanel panel = new JPanel(new java.awt.BorderLayout(0, gap));
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    /** Transparent vertical stack (used for card bodies and settings rows). */
+    static JPanel column() {
+        return new VStackPanel();
+    }
+
+    // ------------------------------------------------------------------
+    // decorative labels
+    // ------------------------------------------------------------------
+
+    static final class Pill extends JLabel {
+        private final Supplier<Color> background;
+        private final Supplier<Color> foreground;
+
+        Pill(String text, Supplier<Color> background, Supplier<Color> foreground) {
+            super(text);
+            this.background = background;
+            this.foreground = foreground;
+            setFont(Theme.font(Font.BOLD, 12f));
+            setBorder(BorderFactory.createEmptyBorder(3, 9, 3, 9));
+            setHorizontalAlignment(SwingConstants.CENTER);
+        }
+
+        @Override
+        public Color getForeground() {
+            return foreground == null ? Theme.TEXT : foreground.get();
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            int arc = Theme.px(3);
+            g2.setColor(background.get());
+            g2.fill(new RoundRectangle2D.Double(0, 0, getWidth() - 1, getHeight() - 1, arc, arc));
+            g2.setColor(Theme.alpha(Theme.ACCENT, Theme.dark ? 110 : 80));
+            g2.setStroke(new BasicStroke(1f));
+            g2.draw(new RoundRectangle2D.Double(0.5, 0.5, getWidth() - 2, getHeight() - 2, arc, arc));
+            g2.dispose();
+            super.paintComponent(g);
+        }
+    }
+
+    static JLabel pill(String text) {
+        return new Pill(text, () -> Theme.ACCENT_SOFT, () -> Theme.blend(Theme.ACCENT,
+                Theme.dark ? Color.WHITE : Color.BLACK, 0.18f));
+    }
+
+    static JLabel pill(String text, Supplier<Color> background, Supplier<Color> foreground) {
+        return new Pill(text, background, foreground);
+    }
+
+    static JLabel badge(String icon, String text, Supplier<Color> tone) {
+        JLabel label = new ThemeLabel(text, tone);
+        label.setFont(Theme.font(Font.BOLD, 12f));
+        label.setIcon(Icons.themeIcon(icon, 13, tone));
+        label.setIconTextGap(6);
+        label.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+        return label;
+    }
+
+    static JLabel iconLabel(String icon, int size, Supplier<Color> color) {
+        JLabel label = new ThemeLabel("", color);
+        label.setIcon(Icons.themeIcon(icon, Theme.px(size), color));
+        return label;
+    }
+
+    // ------------------------------------------------------------------
+    // formatting
+    // ------------------------------------------------------------------
 
     static String humanBytes(long bytes) {
         if (bytes < 1024) {
             return bytes + " B";
         }
-        if (bytes < 1024 * 1024) {
-            return String.format("%.1f KB", bytes / 1024.0);
+        if (bytes < 1024L * 1024L) {
+            return String.format(java.util.Locale.ROOT, "%.1f KB", bytes / 1024.0);
         }
-        return String.format("%.1f MB", bytes / (1024.0 * 1024.0));
+        if (bytes < 1024L * 1024L * 1024L) {
+            return String.format(java.util.Locale.ROOT, "%.1f MB", bytes / (1024.0 * 1024.0));
+        }
+        return String.format(java.util.Locale.ROOT, "%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
     }
 
-    /** Scales an image with high-quality interpolation for the header logo. */
-    static java.awt.Image scaleImage(java.awt.Image source, int size) {
-        BufferedImage out = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-        Graphics2D g2 = out.createGraphics();
-        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION,
-                RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-        g2.drawImage(source, 0, 0, size, size, null);
-        g2.dispose();
-        return out;
+    static String humanDuration(long millis) {
+        if (millis < 1000) {
+            return millis + " ms";
+        }
+        return String.format(java.util.Locale.ROOT, "%.2f s", millis / 1000.0);
     }
 
-    /** Compact rounded badge used in the header. */
-    static JLabel pill(String text, Color background, Color foreground) {
-        JLabel label = new JLabel(text) {
-            @Override
-            protected void paintComponent(Graphics g) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
-                        RenderingHints.VALUE_ANTIALIAS_ON);
-                g2.setColor(background);
-                g2.fillRoundRect(0, 0, getWidth(), getHeight(), getHeight(), getHeight());
-                g2.dispose();
-                super.paintComponent(g);
-            }
-        };
-        label.setForeground(foreground);
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 10f));
-        label.setBorder(BorderFactory.createEmptyBorder(3, 8, 3, 8));
-        return label;
+    // ------------------------------------------------------------------
+    // dynamic (theme aware) labels
+    // ------------------------------------------------------------------
+
+    private static class ThemeLabel extends JLabel {
+        private final Supplier<Color> color;
+
+        ThemeLabel(String text, Supplier<Color> color) {
+            super(text);
+            this.color = color;
+        }
+
+        @Override
+        public Color getForeground() {
+            // Called from the JLabel super constructor before `color` is assigned.
+            return color == null ? Theme.TEXT : color.get();
+        }
     }
 
-    /** Small vector glyph for the sidebar navigation. */
-    static Icon navIcon(String kind, Color color) {
-        return new NavIcon(kind, color);
+    /** Text area whose surface colors follow the active theme. */
+    static final class ThemeArea extends JTextArea {
+        private final boolean terminal;
+
+        ThemeArea(int rows, int columns, boolean terminal) {
+            super(rows, columns);
+            this.terminal = terminal;
+            setOpaque(true);
+            setBorder(BorderFactory.createEmptyBorder(10, 12, 10, 12));
+            setCaretColor(Theme.ACCENT2);
+            setSelectionColor(Theme.ACCENT_SOFT);
+            setSelectedTextColor(Theme.TEXT);
+        }
+
+        boolean isTerminal() {
+            return terminal;
+        }
+
+        @Override
+        public Color getBackground() {
+            return terminal ? Theme.TERMINAL : Theme.CARD;
+        }
+
+        @Override
+        public Color getForeground() {
+            return terminal ? new Color(0xCFE3F1) : Theme.TEXT;
+        }
+
+        @Override
+        public Color getCaretColor() {
+            return Theme.ACCENT2;
+        }
+
+        @Override
+        public Color getSelectionColor() {
+            return Theme.ACCENT_SOFT;
+        }
+
+        @Override
+        public Color getSelectedTextColor() {
+            return Theme.TEXT;
+        }
     }
 
-    /** Rounded card surface with a soft shadow that follows the active theme. */
-    static class CardPanel extends JPanel {
-        CardPanel() {
+    // ------------------------------------------------------------------
+    // custom painted button
+    // ------------------------------------------------------------------
+
+    static final class FlatButton extends JButton {
+        private final ButtonStyle style;
+        private String iconName;
+        private boolean hover;
+        private boolean pressed;
+        private boolean iconOnly;
+
+        FlatButton(String text, String iconName, ButtonStyle style) {
+            super(text == null ? "" : text);
+            this.iconName = iconName;
+            this.style = style;
             setOpaque(false);
+            setContentAreaFilled(false);
+            setBorderPainted(false);
+            setFocusPainted(false);
+            setRolloverEnabled(true);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            setFont(Theme.font(style == ButtonStyle.PRIMARY ? Font.BOLD : Font.PLAIN, 14f));
+            if (iconName != null) {
+                setIconTextGap(Theme.px(7));
+            }
+            addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    if (isEnabled()) {
+                        hover = true;
+                        repaint();
+                    }
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    hover = false;
+                    pressed = false;
+                    repaint();
+                }
+
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    if (isEnabled()) {
+                        pressed = true;
+                        repaint();
+                    }
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    pressed = false;
+                    repaint();
+                }
+            });
+        }
+
+        void setIconOnly(boolean iconOnly) {
+            this.iconOnly = iconOnly;
+            setText("");
+        }
+
+        /** Swaps the painted vector icon (used by the theme toggle). */
+        void setIconName(String iconName) {
+            this.iconName = iconName;
+            repaint();
+        }
+
+        @Override
+        public Dimension getPreferredSize() {
+            FontMetrics metrics = getFontMetrics(getFont());
+            int padding = style == ButtonStyle.PRIMARY ? Theme.px(22) : Theme.px(16);
+            int height = style == ButtonStyle.PRIMARY ? Theme.px(40) : Theme.px(36);
+            if (style == ButtonStyle.LINK) {
+                padding = Theme.px(4);
+                height = Theme.px(24);
+            }
+            if (iconOnly) {
+                return new Dimension(height, height);
+            }
+            int width = metrics.stringWidth(stripHtml(getText())) + padding * 2;
+            if (iconName != null) {
+                width += Theme.px(17) + Theme.px(7);
+            }
+            return new Dimension(Math.max(width, Theme.px(52)), height);
+        }
+
+        @Override
+        public Dimension getMinimumSize() {
+            return getPreferredSize();
+        }
+
+        @Override
+        public Dimension getMaximumSize() {
+            return getPreferredSize();
+        }
+
+        private String stripHtml(String text) {
+            return text == null ? "" : text.replaceAll("<[^>]+>", "");
         }
 
         @Override
         protected void paintComponent(Graphics g) {
             Graphics2D g2 = (Graphics2D) g.create();
             g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            int width = getWidth() - 1;
-            int height = getHeight() - 1;
-            g2.setColor(dark ? new Color(0, 0, 0, 60) : new Color(15, 23, 42, 18));
-            g2.fillRoundRect(1, 2, width - 1, height - 1, 18, 18);
-            g2.setColor(surface());
-            g2.fillRoundRect(0, 0, width, height - 2, 18, 18);
-            g2.setColor(line());
-            g2.setStroke(new BasicStroke(1f));
-            g2.drawRoundRect(0, 0, width, height - 2, 18, 18);
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    }
+            g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING,
+                    RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            int width = getWidth();
+            int height = getHeight();
+            int arc = Theme.px(4);
+            boolean enabled = isEnabled();
+            Color textColor = Theme.TEXT;
+            Color iconColor = Theme.MUTED;
 
-    /** Header with a subtle blue-violet gradient and soft light accents. */
-    static final class GradientPanel extends JPanel {
-        GradientPanel() {
-            setOpaque(false);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setPaint(new java.awt.GradientPaint(0, 0, ACCENT_DARK, getWidth(), 0, PURPLE));
-            g2.fillRect(0, 0, getWidth(), getHeight());
-            g2.setColor(new Color(255, 255, 255, 16));
-            g2.fillOval(-90, -120, 320, 320);
-            g2.fillOval(getWidth() - 210, -90, 300, 300);
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    }
-
-    /** Makes a component clickable without a visible button chrome. */
-    static void onClick(JComponent component, Runnable action) {
-        component.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                action.run();
+            if (style == ButtonStyle.PRIMARY) {
+                Color primary = enabled ? (pressed || hover ? Theme.ACCENT2 : Theme.ACCENT)
+                        : Theme.alpha(Theme.BORDER_STRONG, 150);
+                g2.setColor(primary);
+                g2.fill(new RoundRectangle2D.Double(0, 0, width, height, arc, arc));
+                g2.setColor(Theme.alpha(Theme.BORDER_STRONG, enabled ? 90 : 40));
+                g2.setStroke(new BasicStroke(1f));
+                g2.draw(new RoundRectangle2D.Double(0.5, 0.5, width - 1, height - 1, arc, arc));
+                // Ink text on bronze, parchment text on dark ink accents.
+                textColor = Theme.dark ? new Color(0x1A1610) : new Color(0xFBF8F1);
+                iconColor = textColor;
+            } else if (style == ButtonStyle.SECONDARY) {
+                Color fill = enabled ? Theme.CARD_ALT : Theme.alpha(Theme.CARD_ALT, 120);
+                if (enabled && pressed) {
+                    fill = Theme.alpha(Theme.BORDER_STRONG, 120);
+                } else if (enabled && hover) {
+                    fill = Theme.CARD_HOVER;
+                }
+                g2.setColor(fill);
+                g2.fill(new RoundRectangle2D.Double(0, 0, width, height, arc, arc));
+                g2.setColor(enabled ? (hover ? Theme.BORDER_STRONG : Theme.BORDER) : Theme.BORDER);
+                g2.setStroke(new BasicStroke(1f));
+                g2.draw(new RoundRectangle2D.Double(0.5, 0.5, width - 1, height - 1, arc, arc));
+                textColor = enabled ? Theme.TEXT : Theme.MUTED;
+                iconColor = enabled ? Theme.MUTED : Theme.FAINT;
+            } else if (style == ButtonStyle.GHOST) {
+                if (enabled && (hover || pressed)) {
+                    g2.setColor(pressed ? Theme.CARD_HOVER : Theme.CARD_ALT);
+                    g2.fill(new RoundRectangle2D.Double(0, 0, width, height, arc, arc));
+                }
+                textColor = enabled ? (hover ? Theme.TEXT : Theme.MUTED) : Theme.FAINT;
+                iconColor = enabled ? (hover ? Theme.TEXT : Theme.MUTED) : Theme.FAINT;
+            } else if (style == ButtonStyle.DANGER) {
+                Color base = Theme.DANGER;
+                if (enabled && (hover || pressed)) {
+                    g2.setColor(Theme.alpha(base, 22));
+                    g2.fill(new RoundRectangle2D.Double(0, 0, width, height, arc, arc));
+                }
+                g2.setColor(Theme.alpha(base, enabled ? (hover ? 140 : 90) : 40));
+                g2.setStroke(new BasicStroke(1f));
+                g2.draw(new RoundRectangle2D.Double(0.5, 0.5, width - 1, height - 1, arc, arc));
+                textColor = enabled ? base : Theme.alpha(base, 110);
+                iconColor = textColor;
+            } else { // LINK
+                textColor = enabled ? (hover ? Theme.ACCENT2 : Theme.ACCENT) : Theme.FAINT;
+                iconColor = textColor;
             }
-        });
-    }
 
-    private static final class InkLabel extends JLabel {
-        InkLabel(String text) {
-            super(text);
-        }
+            if (hasFocus() && enabled && style != ButtonStyle.LINK) {
+                g2.setColor(Theme.alpha(Theme.ACCENT, 130));
+                g2.setStroke(new BasicStroke(1f));
+                g2.draw(new RoundRectangle2D.Double(1, 1, width - 3, height - 3, arc, arc));
+            }
 
-        @Override
-        public Color getForeground() {
-            return ink();
-        }
-    }
+            String text = getText();
+            boolean hasText = text != null && !text.isEmpty();
+            int contentWidth = 0;
+            int textWidth = hasText ? g2.getFontMetrics(getFont()).stringWidth(stripHtml(text)) : 0;
+            if (iconName != null) {
+                contentWidth += Theme.px(17);
+                if (hasText) {
+                    contentWidth += Theme.px(7);
+                }
+            }
+            contentWidth += textWidth;
+            int contentX = Math.max(Theme.px(4), (width - contentWidth) / 2);
+            int centerY = height / 2;
 
-    private static final class MutedLabel extends JLabel {
-        MutedLabel(String text) {
-            super(text);
-            setFont(getFont().deriveFont(Font.PLAIN, 12f));
-        }
-
-        @Override
-        public Color getForeground() {
-            return mutedInk();
-        }
-    }
-
-    private static final class NavIcon implements Icon {
-        private final String kind;
-        private final Color color;
-
-        NavIcon(String kind, Color color) {
-            this.kind = kind == null ? "" : kind;
-            this.color = color == null ? ACCENT : color;
-        }
-
-        @Override
-        public int getIconWidth() {
-            return 18;
-        }
-
-        @Override
-        public int getIconHeight() {
-            return 18;
-        }
-
-        @Override
-        public void paintIcon(Component component, Graphics g, int x, int y) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(color);
-            g2.setStroke(new BasicStroke(1.6f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-            if ("dashboard".equals(kind)) {
-                g2.fillRoundRect(x + 1, y + 2, 6, 6, 2, 2);
-                g2.fillRoundRect(x + 10, y + 2, 6, 6, 2, 2);
-                g2.fillRoundRect(x + 1, y + 10, 6, 6, 2, 2);
-                g2.fillRoundRect(x + 10, y + 10, 6, 6, 2, 2);
-            } else if ("transforms".equals(kind)) {
-                g2.drawLine(x + 2, y + 4, x + 16, y + 4);
-                g2.drawLine(x + 2, y + 9, x + 16, y + 9);
-                g2.drawLine(x + 2, y + 14, x + 16, y + 14);
-                g2.fillOval(x + 5, y + 2, 4, 4);
-                g2.fillOval(x + 11, y + 7, 4, 4);
-                g2.fillOval(x + 3, y + 12, 4, 4);
-            } else if ("rules".equals(kind)) {
-                g2.drawRoundRect(x + 3, y + 1, 12, 16, 3, 3);
-                g2.drawLine(x + 6, y + 6, x + 12, y + 6);
-                g2.drawLine(x + 6, y + 9, x + 12, y + 9);
-                g2.drawLine(x + 6, y + 12, x + 9, y + 12);
-            } else if ("enterprise".equals(kind)) {
-                int[] xs = {x + 9, x + 16, x + 9, x + 2};
-                int[] ys = {y + 1, y + 9, y + 17, y + 9};
-                g2.drawPolygon(xs, ys, 4);
-                g2.drawLine(x + 6, y + 9, x + 12, y + 9);
-            } else if ("console".equals(kind)) {
-                g2.drawRoundRect(x + 1, y + 2, 16, 14, 3, 3);
-                g2.drawLine(x + 4, y + 6, x + 7, y + 9);
-                g2.drawLine(x + 7, y + 9, x + 4, y + 12);
-                g2.drawLine(x + 9, y + 12, x + 13, y + 12);
-            } else {
-                g2.fillOval(x + 5, y + 5, 8, 8);
+            if (iconName != null) {
+                int iconSize = Theme.px(17);
+                Icons.paint(g2, iconName, contentX, centerY - iconSize / 2, iconSize,
+                        iconColor, 1.7f);
+                contentX += iconSize + (hasText ? Theme.px(7) : 0);
+            }
+            if (hasText) {
+                g2.setFont(getFont());
+                g2.setColor(textColor);
+                FontMetrics metrics = g2.getFontMetrics();
+                int baseline = centerY - metrics.getHeight() / 2 + metrics.getAscent();
+                g2.drawString(stripHtml(text), contentX, baseline);
             }
             g2.dispose();
         }
+
+        private PaintPair primaryColors(boolean enabled) {
+            if (!enabled) {
+                return new PaintPair(Theme.alpha(Theme.BORDER_STRONG, 160));
+            }
+            if (pressed) {
+                return new PaintPair(Theme.accentPaint(getBounds(), true));
+            }
+            if (hover) {
+                return new PaintPair(Theme.accentHoverPaint(getBounds()));
+            }
+            return new PaintPair(Theme.accentPaint(getBounds(), true));
+        }
+    }
+
+    private static final class PaintPair {
+        private final java.awt.Paint paint;
+
+        PaintPair(java.awt.Paint paint) {
+            this.paint = paint;
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // misc
+    // ------------------------------------------------------------------
+
+    static JComponent constrain(JComponent component, int height) {
+        Dimension preferred = component.getPreferredSize();
+        component.setMaximumSize(new Dimension(Integer.MAX_VALUE, Math.max(height, preferred.height)));
+        return component;
+    }
+
+    /** Caps a component to its preferred height so BoxLayout rows stay compact. */
+    static <T extends JComponent> T limitHeight(T component) {
+        Dimension preferred = component.getPreferredSize();
+        component.setMaximumSize(new Dimension(Integer.MAX_VALUE, preferred.height));
+        return component;
+    }
+
+    static <T extends Component> T fullWidth(T component) {
+        if (component instanceof JComponent) {
+            ((JComponent) component).setAlignmentX(Component.LEFT_ALIGNMENT);
+        }
+        return component;
+    }
+
+    static JComponent smallSpinner(JSpinner spinner) {
+        Dimension size = new Dimension(Theme.px(86), Theme.px(30));
+        spinner.setPreferredSize(size);
+        spinner.setMinimumSize(size);
+        spinner.setMaximumSize(size);
+        return spinner;
+    }
+
+    static JComponent smallField(JTextField field) {
+        Dimension size = new Dimension(Theme.px(170), Theme.px(30));
+        field.setPreferredSize(size);
+        field.setMinimumSize(size);
+        field.setMaximumSize(new Dimension(Integer.MAX_VALUE, size.height));
+        return field;
+    }
+
+    static JLabel spacer() {
+        return new JLabel(" ");
+    }
+
+    static Insets insets(int top, int left, int bottom, int right) {
+        return new Insets(top, left, bottom, right);
+    }
+
+    static int textHeight(java.awt.Font font) {
+        return UIManager.getFont("defaultFont") == null ? 16 : 16;
     }
 }

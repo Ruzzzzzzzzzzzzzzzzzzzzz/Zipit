@@ -162,6 +162,10 @@ public final class DefaultRuleSet implements RuleSet {
         if (hasKeepAnnotation(method.visibleAnnotations) || hasKeepAnnotation(method.invisibleAnnotations)) {
             return true;
         }
+        if (hasAnnotation(method.visibleAnnotations, DO_NOT_RENAME_DESC)
+                || hasAnnotation(method.invisibleAnnotations, DO_NOT_RENAME_DESC)) {
+            return true;
+        }
         if (hasForeignAnnotation(method.visibleAnnotations) || hasForeignAnnotation(method.invisibleAnnotations)) {
             // Framework-visible annotations frequently imply reflective lookup.
             return true;
@@ -190,6 +194,10 @@ public final class DefaultRuleSet implements RuleSet {
             return true;
         }
         if (hasKeepAnnotation(field.visibleAnnotations) || hasKeepAnnotation(field.invisibleAnnotations)) {
+            return true;
+        }
+        if (hasAnnotation(field.visibleAnnotations, DO_NOT_RENAME_DESC)
+                || hasAnnotation(field.invisibleAnnotations, DO_NOT_RENAME_DESC)) {
             return true;
         }
         if (hasForeignAnnotation(field.visibleAnnotations) || hasForeignAnnotation(field.invisibleAnnotations)) {

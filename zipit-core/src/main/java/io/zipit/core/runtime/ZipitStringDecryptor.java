@@ -18,9 +18,16 @@ public final class ZipitStringDecryptor {
     /**
      * Decrypts a Base64 payload with the supplied 64-bit key.
      *
+     * <p>The result is interned so that encrypted string literals keep the
+     * identity semantics of the original constants: {@code "x" == "x"} and
+     * {@code "x" == new String("x").intern()} must still hold in protected
+     * code (also matters for {@code synchronized("lock")} and
+     * identity-keyed caches). The cost is one permanent string-pool entry per
+     * distinct literal.</p>
+     *
      * @param payload encrypted string
      * @param key     per-string key embedded at the call site
-     * @return decrypted UTF-8 string
+     * @return decrypted, interned UTF-8 string
      */
     public static String d(String payload, long key) {
         byte[] data = Base64.getDecoder().decode(payload);
@@ -31,6 +38,6 @@ public final class ZipitStringDecryptor {
             state ^= state << 17;
             data[i] = (byte) (data[i] ^ (byte) (state >>> 24));
         }
-        return new String(data, StandardCharsets.UTF_8);
+        return new String(data, StandardCharsets.UTF_8).intern();
     }
 }

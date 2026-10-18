@@ -3,161 +3,532 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Zipit License Server</title>
+<!-- Client setup: legacy marker kept for server tests; the visible heading is localized. -->
+<title>Zipit Auth Console · ZIPIT LICENSE SERVER</title>
 <style>
   :root{
-    --bg:#0b1020; --panel:#111827; --panel2:#0f172a; --line:#1f2937;
-    --text:#e5e7eb; --muted:#94a3b8; --accent:#3b82f6; --accent2:#7c3aed;
-    --ok:#10b981; --warn:#f59e0b; --bad:#ef4444;
+    --bg:#F6F1E7; --surface:#FBF8F1; --surface-alt:#F1EADB;
+    --border:#DED3C0; --border-strong:#C9BCA4;
+    --ink:#2B2620; --muted:#7C7163;
+    --accent:#8A6A3B; --accent-strong:#6E5329;
+    --danger:#A03D32; --success:#4F6B4A; --warning:#8A6D2F;
+    --r-card:6px; --r-ctl:4px; --r-modal:8px;
+    --shadow:0 10px 30px rgba(43,38,32,.10);
+    --shadow-soft:0 1px 2px rgba(43,38,32,.05);
+    --serif:Georgia,"Palatino Linotype","Times New Roman","Songti SC",SimSun,serif;
+    --sans:"Segoe UI","Microsoft YaHei UI","Microsoft YaHei",system-ui,-apple-system,Arial,sans-serif;
+    --mono:Consolas,"Cascadia Code","Courier New",monospace;
   }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 "Segoe UI",Inter,Roboto,Arial,sans-serif}
-  header{background:linear-gradient(120deg,#1d4ed8,#7c3aed);padding:26px 34px}
-  .brand{font-size:26px;font-weight:800;letter-spacing:.08em}
-  .sub{color:#dbeafe;font-size:13px;margin-top:2px}
-  .header-row{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
-  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#34d399;margin-right:6px;box-shadow:0 0 10px #34d399}
-  main{padding:22px 34px 40px;max-width:1440px;margin:0 auto}
-  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
-  .stat{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
-  .stat b{display:block;font-size:24px}
-  .stat span{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
-  .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:16px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px;margin-bottom:16px}
-  h2{margin:0 0 10px;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:#93c5fd}
-  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px}
-  input,select,textarea{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #334155;
-    background:var(--panel2);color:var(--text);font:inherit;outline:none}
-  input:focus,select:focus,textarea:focus{border-color:var(--accent)}
-  textarea{min-height:150px;resize:vertical;font-family:Consolas,monospace;font-size:12px}
-  button{border:0;border-radius:10px;padding:9px 14px;font-weight:600;cursor:pointer;color:#fff;background:#334155}
-  button:hover{filter:brightness(1.1)}
-  button.primary{background:var(--accent)}
-  button.danger{background:var(--bad)}
-  button.ghost{background:transparent;border:1px solid #475569}
-  .row{display:flex;gap:10px}
-  .row>*{flex:1}
-  .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
-  .chip{display:flex;align-items:center;gap:6px;background:var(--panel2);border:1px solid #334155;
-    border-radius:999px;padding:5px 10px;font-size:12px;color:#cbd5e1}
-  .chip input{width:auto;accent-color:var(--accent)}
-  .muted{color:var(--muted);font-size:12px}
-  table{width:100%;border-collapse:collapse}
-  th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:13px;vertical-align:top}
-  th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.08em}
-  .pill{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
-  .pill.active{background:rgba(16,185,129,.16);color:#6ee7b7}
-  .pill.revoked{background:rgba(239,68,68,.16);color:#fca5a5}
-  .pill.expired{background:rgba(148,163,184,.16);color:#cbd5e1}
-  .actions{display:flex;gap:6px;flex-wrap:wrap}
-  .actions button,.actions a{font-size:12px;padding:6px 9px;border-radius:8px;text-decoration:none;color:#fff}
-  .actions a{background:#334155}
-  pre{white-space:pre-wrap;word-break:break-word;background:#0b1220;border:1px dashed #334155;
-    border-radius:10px;padding:12px;font:12px/1.55 Consolas,monospace;max-height:260px;overflow:auto}
-  .result{margin-top:12px;padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--panel2);font-size:13px}
-  .result.ok{border-color:rgba(16,185,129,.5)}
-  .result.bad{border-color:rgba(239,68,68,.5)}
-  .token{padding:8px 10px;border-radius:10px;border:1px solid #475569;background:rgba(255,255,255,.08);color:#fff}
-  .hidden{display:none}
-  footer{color:var(--muted);font-size:12px;padding:0 34px 30px;max-width:1440px;margin:0 auto}
-  @media(max-width:980px){.grid{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg);
+    background-image:linear-gradient(180deg,#F8F4EC 0%,var(--bg) 260px);
+    color:var(--ink);
+    font:13.5px/1.55 var(--sans);
+    min-height:100vh;
+    color-scheme:light;
+  }
+  .hidden{display:none !important}
+  .muted{color:var(--muted)}
+  .mono{font-family:var(--mono);font-size:12px}
+  code{font-family:var(--mono);font-size:12px;color:var(--accent-strong);
+    background:var(--surface-alt);border:1px solid var(--border);border-radius:3px;padding:0 5px}
+  ::-webkit-scrollbar{width:10px;height:10px}
+  ::-webkit-scrollbar-track{background:var(--bg)}
+  ::-webkit-scrollbar-thumb{background:var(--border-strong);border:2px solid var(--bg);border-radius:6px}
+  ::-webkit-scrollbar-thumb:hover{background:var(--muted)}
+
+  /* ---------- classic seal / brand ---------- */
+  .seal{width:38px;height:38px;flex:0 0 auto;border:1px solid var(--accent);border-radius:var(--r-ctl);
+    display:flex;align-items:center;justify-content:center;background:var(--surface);
+    font:700 20px/1 var(--serif);color:var(--accent);box-shadow:inset 0 0 0 3px var(--surface-alt)}
+  .brand{font:600 15px/1.3 var(--serif);letter-spacing:.10em;color:var(--ink);white-space:nowrap}
+  .brand-sub{font:12px/1.4 var(--sans);color:var(--muted);letter-spacing:.02em;margin-top:1px}
+
+  /* ---------- top bar ---------- */
+  .topbar{position:sticky;top:0;z-index:30;display:flex;align-items:center;justify-content:space-between;
+    gap:16px;padding:12px 26px;background:var(--surface);border-bottom:1px solid var(--border-strong);
+    box-shadow:var(--shadow-soft);flex-wrap:wrap}
+  .brand-wrap{display:flex;align-items:center;gap:11px;min-width:0}
+  .topbar-right{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .server-chip{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
+    border:1px solid var(--border);border-radius:var(--r-ctl);padding:5px 10px;background:var(--surface-alt);max-width:min(520px,58vw)}
+  .server-chip #serverUrl{font-family:var(--mono);font-size:12px;color:var(--ink);overflow:hidden;
+    text-overflow:ellipsis;white-space:nowrap}
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--muted);flex:0 0 auto}
+  .dot.ok{background:var(--success)}
+  .dot.bad{background:var(--danger)}
+
+  /* ---------- language switch ---------- */
+  .lang-switch{display:inline-flex;align-items:stretch;border:1px solid var(--border-strong);
+    border-radius:var(--r-ctl);overflow:hidden;background:var(--surface)}
+  .lang-switch button{appearance:none;border:0;background:transparent;color:var(--muted);
+    font:12px/1 var(--sans);padding:6px 11px;cursor:pointer;transition:background .15s,color .15s}
+  .lang-switch button + button{border-left:1px solid var(--border)}
+  .lang-switch button:hover{background:var(--surface-alt);color:var(--ink)}
+  .lang-switch button.active{background:var(--accent);color:#FBF8F1}
+
+  /* ---------- tabs ---------- */
+  .tabs{display:flex;gap:2px;padding:0 26px;border-bottom:1px solid var(--border-strong);
+    background:var(--bg);overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{appearance:none;background:transparent;border:0;border-bottom:2px solid transparent;
+    padding:11px 15px 9px;font:14px/1.3 var(--serif);letter-spacing:.03em;color:var(--muted);
+    cursor:pointer;white-space:nowrap;transition:color .15s,background .15s,border-color .15s}
+  .tab:hover{color:var(--ink);background:var(--surface-alt)}
+  .tab.active{color:var(--ink);border-bottom-color:var(--accent);background:transparent}
+
+  /* ---------- content / cards ---------- */
+  .content{max-width:1420px;margin:0 auto;padding:20px 26px 50px}
+  .tab-panel{display:none}
+  .tab-panel.active{display:block}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-card);
+    padding:18px 20px;box-shadow:var(--shadow-soft)}
+  .card + .card{margin-top:16px}
+  .card h2{font:600 15px/1.35 var(--serif);letter-spacing:.03em;color:var(--ink);
+    margin:0 0 10px;padding-bottom:8px;border-bottom:1px solid var(--border-strong);position:relative}
+  .card h2::after{content:"";position:absolute;left:0;bottom:-1px;width:44px;height:1px;background:var(--accent)}
+  .card .hint{font-size:12.5px;color:var(--muted);margin:0 0 14px}
+  .grid{display:grid;gap:16px}
+  .grid.two{grid-template-columns:1.3fr .9fr}
+  .grid.forms{grid-template-columns:1fr 1fr}
+  .stat-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin-bottom:16px}
+  .stat{background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--accent);
+    border-radius:var(--r-card);padding:13px 15px;box-shadow:var(--shadow-soft)}
+  .stat-label{font:10.5px/1.4 var(--serif);letter-spacing:.13em;text-transform:uppercase;color:var(--muted)}
+  .stat-value{font:600 27px/1.2 var(--serif);color:var(--ink);margin:5px 0 2px}
+  .stat-foot{font-size:11.5px;color:var(--muted)}
+
+  /* ---------- forms ---------- */
+  .form-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;align-items:end}
+  .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+  .field.wide{grid-column:span 2}
+  .field label{font-size:11.5px;font-weight:600;letter-spacing:.05em;color:var(--muted)}
+  input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border-strong);
+    border-radius:var(--r-ctl);background:var(--surface);color:var(--ink);
+    font:13.5px/1.45 var(--sans);outline:none;transition:border-color .15s,box-shadow .15s}
+  input::placeholder,textarea::placeholder{color:#A89A87}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);box-shadow:0 0 0 2px rgba(138,106,59,.14)}
+  select{cursor:pointer}
+  textarea{min-height:120px;resize:vertical;font-family:var(--mono);font-size:12px;line-height:1.55}
+  .row{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .row.end{justify-content:flex-end}
+  .toolbar{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:13px}
+  .filters{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:13px}
+  .filters .field{min-width:160px;flex:1 1 160px}
+  .filters .field.grow{flex:2 1 240px}
+
+  /* ---------- buttons ---------- */
+  .btn{appearance:none;font:13px/1.4 var(--sans);padding:8px 14px;border-radius:var(--r-ctl);
+    border:1px solid var(--border-strong);background:var(--surface);color:var(--ink);cursor:pointer;
+    white-space:nowrap;transition:background .15s,border-color .15s,color .15s}
+  .btn:hover{background:var(--surface-alt);border-color:var(--accent)}
+  .btn:active{background:var(--border)}
+  .btn:focus-visible{outline:2px solid rgba(138,106,59,.35);outline-offset:1px}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#FBF8F1}
+  .btn.primary:hover{background:var(--accent-strong);border-color:var(--accent-strong)}
+  .btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+  .btn.danger:hover{background:rgba(160,61,50,.08);border-color:var(--danger)}
+  .btn.sm{padding:4px 10px;font-size:12px}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---------- tables ---------- */
+  .table-wrap{overflow:auto;border:1px solid var(--border);border-radius:var(--r-card);background:var(--surface)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:9px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--border)}
+  th{font:600 10.5px/1.4 var(--serif);letter-spacing:.11em;text-transform:uppercase;color:var(--muted);
+    border-bottom:1px solid var(--border-strong);background:var(--surface-alt);white-space:nowrap}
+  tbody tr:hover{background:var(--surface-alt)}
+  tbody tr:last-child td{border-bottom:none}
+  td .actions{display:flex;gap:5px;flex-wrap:wrap}
+  .empty{padding:22px 14px;text-align:center;color:var(--muted);font-size:13px}
+  .cell-strong{font-weight:600;color:var(--ink)}
+  .cell-sub{font-size:11.5px;color:var(--muted)}
+  .mono-cell{font-family:var(--mono);font-size:12px;color:var(--ink)}
+
+  /* ---------- status / tags ---------- */
+  .status{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);white-space:nowrap}
+  .status::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
+  .status.ok{color:var(--success)}
+  .status.warn{color:var(--warning)}
+  .status.bad{color:var(--danger)}
+  .status.muted{color:var(--muted)}
+  .badge{display:inline-block;border:1px solid var(--border-strong);border-radius:3px;
+    padding:1px 6px;font:11px/1.5 var(--mono);color:var(--muted);background:var(--surface-alt);white-space:nowrap}
+  .chips{display:flex;flex-wrap:wrap;gap:5px}
+  .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--border);
+    border-radius:var(--r-ctl);padding:3px 7px;font-size:11.5px;color:var(--ink);background:var(--surface-alt)}
+  .chip .x{appearance:none;border:0;background:transparent;color:var(--muted);cursor:pointer;
+    font-size:13px;line-height:1;padding:0 2px;border-radius:3px}
+  .chip .x:hover{color:var(--danger);background:rgba(160,61,50,.08)}
+
+  /* ---------- result panels ---------- */
+  .result{margin-top:14px;border:1px solid var(--border);border-radius:var(--r-card);
+    background:var(--surface-alt);padding:12px 14px}
+  .result.ok{border-left:2px solid var(--success)}
+  .result.bad{border-left:2px solid var(--danger)}
+  .result pre{white-space:pre-wrap;word-break:break-word;margin:9px 0 0;background:var(--surface);
+    border:1px solid var(--border);border-radius:var(--r-ctl);padding:10px;font:12px/1.6 var(--mono);max-height:260px;overflow:auto}
+  .codes{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-top:10px}
+  .code-item{display:flex;align-items:center;justify-content:space-between;gap:8px;
+    border:1px solid var(--border);border-radius:var(--r-ctl);padding:6px 8px;
+    background:var(--surface-alt);font:12px/1.4 var(--mono);color:var(--ink)}
+  .code-item button{appearance:none;border:1px solid var(--border-strong);background:var(--surface);
+    color:var(--muted);border-radius:3px;padding:1px 7px;font-size:11px;cursor:pointer}
+  .code-item button:hover{color:var(--ink);border-color:var(--accent)}
+  .audit-list{list-style:none;margin:0;padding:0;max-height:420px;overflow:auto}
+  .audit-list li{display:flex;gap:10px;padding:8px 2px;border-bottom:1px solid var(--border);font-size:12.5px}
+  .audit-list li:last-child{border-bottom:none}
+  .audit-ts{color:var(--muted);font-family:var(--mono);font-size:11px;white-space:nowrap;padding-top:1px}
+  .audit-type{color:var(--accent-strong);font-weight:600;white-space:nowrap}
+  .audit-detail{color:var(--muted);min-width:0;overflow:hidden;text-overflow:ellipsis;
+    white-space:nowrap;text-overflow:ellipsis}
+  pre.yaml{margin:0;white-space:pre-wrap;word-break:break-word;background:var(--surface);
+    border:1px solid var(--border);border-radius:var(--r-ctl);padding:10px;
+    font:12px/1.55 var(--mono);max-height:220px;overflow:auto;color:var(--ink)}
+
+  /* ---------- login ---------- */
+  .login-wrap{position:fixed;inset:0;z-index:60;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);padding:24px}
+  .login-card{width:100%;max-width:430px;background:var(--surface);border:1px solid var(--border-strong);
+    border-radius:var(--r-modal);padding:26px 30px 24px;box-shadow:var(--shadow);position:relative}
+  .login-card::before{content:"";position:absolute;left:30px;right:30px;top:0;height:2px;background:var(--accent)}
+  .login-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .login-card h1{font:600 20px/1.3 var(--serif);letter-spacing:.03em;margin:16px 0 6px;
+    padding-bottom:10px;border-bottom:1px solid var(--border-strong);position:relative}
+  .login-card h1::after{content:"";position:absolute;left:0;bottom:-1px;width:56px;height:1px;background:var(--accent)}
+  .login-card p.login-hint{margin:0 0 16px;font-size:12.5px;color:var(--muted)}
+  .login-error{border:1px solid var(--danger);border-left:3px solid var(--danger);border-radius:var(--r-ctl);
+    background:rgba(160,61,50,.06);color:var(--danger);padding:8px 11px;font-size:12.5px;margin:0 0 12px}
+  .login-actions{display:flex;gap:9px;margin-top:14px}
+  .login-actions .btn{flex:1}
+  .login-server{margin-top:16px;font-size:11.5px;color:var(--muted);text-align:center;word-break:break-all}
+  .login-lang{border:0;background:transparent}
+
+  /* ---------- toasts ---------- */
+  .toasts{position:fixed;right:20px;bottom:20px;z-index:90;display:flex;flex-direction:column;
+    gap:8px;max-width:380px}
+  .toast{background:var(--surface);border:1px solid var(--border-strong);border-left:3px solid var(--accent);
+    border-radius:var(--r-ctl);padding:9px 13px;font-size:13px;color:var(--ink);
+    box-shadow:0 6px 18px rgba(43,38,32,.10);word-break:break-word}
+  .toast.ok{border-left-color:var(--success)}
+  .toast.error{border-left-color:var(--danger)}
+  .toast.warn{border-left-color:var(--warning)}
+
+  footer{max-width:1420px;margin:0 auto;padding:0 26px 28px;color:var(--muted);font-size:11.5px;
+    display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;border-top:1px solid var(--border);
+    margin-top:18px;padding-top:14px}
+
+  @media (max-width:1180px){
+    .stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .grid.two,.grid.forms{grid-template-columns:1fr}
+    .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  }
+  @media (max-width:720px){
+    .topbar{padding:11px 16px}
+    .tabs{padding:0 16px}
+    .content{padding:16px 16px 40px}
+    footer{padding:0 16px 22px}
+    .stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .form-grid{grid-template-columns:1fr}
+    .field.wide{grid-column:span 1}
+    .brand-sub{display:none}
+    .server-chip{display:none}
+  }
 </style>
 </head>
 <body>
-<header>
-  <div class="header-row">
-    <div>
-      <div class="brand">ZIPIT LICENSE SERVER</div>
-      <div class="sub"><span class="dot"></span>Local signing service · RSA-SHA256 · revocation registry</div>
+<!-- Login screen -->
+<div id="login" class="login-wrap">
+  <div class="login-card">
+    <div class="login-head">
+      <div class="seal" aria-hidden="true">Z</div>
+      <div class="lang-switch login-lang" role="group" aria-label="Language">
+        <button type="button" data-lang="zh">中文</button>
+        <button type="button" data-lang="en">English</button>
+      </div>
     </div>
-    <div class="actions">
-      <input id="adminToken" class="token" type="password" placeholder="Admin token (optional)">
-      <button class="ghost" onclick="loadAll()">Refresh</button>
-      <button class="ghost" onclick="showPublicKey()">Public key</button>
+    <h1 data-i18n="login.title">Admin Sign-in</h1>
+    <p class="login-hint" data-i18n="login.hint">Enter the token configured with --admin-token. A local test server without a token can enter directly.</p>
+    <div id="loginError" class="login-error hidden"></div>
+    <div class="field">
+      <label for="loginToken" data-i18n="login.token">Admin Token</label>
+      <input id="loginToken" type="password" placeholder="X-Admin-Token" autocomplete="off" spellcheck="false">
     </div>
+    <div class="login-actions">
+      <button class="btn primary" id="loginBtn" data-i18n="login.enter">Enter console</button>
+      <button class="btn hidden" id="loginSkipBtn" data-i18n="login.skip">Continue without token</button>
+    </div>
+    <div class="login-server" id="loginServer"></div>
   </div>
-</header>
+</div>
 
-<main>
-  <section class="stats">
-    <div class="stat"><b id="statTotal">0</b><span>Total licenses</span></div>
-    <div class="stat"><b id="statActive">0</b><span>Active</span></div>
-    <div class="stat"><b id="statRevoked">0</b><span>Revoked</span></div>
-    <div class="stat"><b id="statEditions">0</b><span>Editions</span></div>
-  </section>
+<!-- Console -->
+<div id="app" class="hidden">
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="seal" aria-hidden="true">Z</div>
+      <div>
+        <div class="brand">ZIPIT LICENSE SERVER</div>
+        <div class="brand-sub" data-i18n="brand.sub">Multi-Software Authorization Console</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="server-chip" title="Server">
+        <span id="healthDot" class="dot"></span>
+        <span id="serverUrl">—</span>
+        <span id="healthText" class="muted"></span>
+      </div>
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="zh">中文</button>
+        <button type="button" data-lang="en">English</button>
+      </div>
+      <button class="btn sm" id="refreshBtn" data-i18n="btn.refresh">Refresh</button>
+      <button class="btn sm" id="logoutBtn" data-i18n="btn.logout">Sign out</button>
+    </div>
+  </header>
 
-  <div class="grid">
-    <section class="card">
-      <h2>Issue a license</h2>
-      <label>Licensee</label>
-      <input id="licensee" placeholder="Acme Corp">
-      <div class="row">
-        <div>
-          <label>Edition</label>
-          <select id="edition">
-            <option>enterprise</option>
-            <option>professional</option>
-            <option>evaluation</option>
-          </select>
-        </div>
-        <div>
-          <label>Expires</label>
-          <input id="expires" type="date">
-        </div>
+  <nav class="tabs" id="tabs">
+    <button class="tab active" data-tab="overview" data-i18n="nav.overview">Overview</button>
+    <button class="tab" data-tab="software" data-i18n="nav.software">Software</button>
+    <button class="tab" data-tab="cards" data-i18n="nav.cards">Cards</button>
+    <button class="tab" data-tab="users" data-i18n="nav.users">Users</button>
+    <button class="tab" data-tab="license" data-i18n="nav.license">License</button>
+  </nav>
+
+  <main class="content">
+
+    <!-- Overview -->
+    <section id="tab-overview" class="tab-panel active">
+      <div class="stat-grid">
+        <div class="stat"><div class="stat-label" data-i18n="stat.software">Software</div><div class="stat-value" id="statSoftware">0</div><div class="stat-foot" id="statSoftwareFoot"></div></div>
+        <div class="stat"><div class="stat-label" data-i18n="stat.users">Users</div><div class="stat-value" id="statUsers">0</div><div class="stat-foot" id="statUsersFoot"></div></div>
+        <div class="stat"><div class="stat-label" data-i18n="stat.unused">Unused cards</div><div class="stat-value" id="statUnused">0</div><div class="stat-foot" id="statUnusedFoot"></div></div>
+        <div class="stat"><div class="stat-label" data-i18n="stat.used">Used cards</div><div class="stat-value" id="statUsed">0</div><div class="stat-foot" id="statUsedFoot"></div></div>
+        <div class="stat"><div class="stat-label" data-i18n="stat.memberships">Authorizations</div><div class="stat-value" id="statMemberships">0</div><div class="stat-foot" id="statMembershipsFoot"></div></div>
       </div>
-      <label>Features</label>
-      <div class="chips">
-        <label class="chip"><input type="checkbox" value="audit" checked>audit</label>
-        <label class="chip"><input type="checkbox" value="policy" checked>policy</label>
-        <label class="chip"><input type="checkbox" value="incremental">incremental</label>
-        <label class="chip"><input type="checkbox" value="plugins">plugins</label>
-        <label class="chip"><input type="checkbox" value="native">native</label>
-        <label class="chip"><input type="checkbox" value="android">android</label>
-      </div>
-      <label>Extra features (comma separated)</label>
-      <input id="extraFeatures" placeholder="e.g. sbom, priority-support">
-      <div style="margin-top:14px"><button class="primary" onclick="createLicense()">Issue &amp; sign</button></div>
-      <div id="createResult" class="hidden">
-        <div class="result ok" style="margin-top:14px">
-          <b>Issued.</b> <span id="createdMeta" class="muted"></span>
-        </div>
-        <pre id="createdYaml"></pre>
-        <div class="actions" style="margin-top:8px">
-          <button onclick="copyText(document.getElementById('createdYaml').innerText)">Copy YAML</button>
-          <button id="createdDownload">Download</button>
-        </div>
+      <div class="grid two">
+        <section class="card">
+          <h2 data-i18n="overview.recent">Recent activations</h2>
+          <div class="hint" data-i18n="overview.recentHint">Latest 10 software authorization activations.</div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr>
+                <th data-i18n="table.user">User</th>
+                <th data-i18n="table.software">Software</th>
+                <th data-i18n="table.group">Group</th>
+                <th data-i18n="table.activated">Activated</th>
+              </tr></thead>
+              <tbody id="overviewRecent"><tr><td colspan="4" class="empty" data-i18n="common.loading">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </section>
+        <section class="card">
+          <h2 data-i18n="overview.audit">Audit trail</h2>
+          <div class="hint" data-i18n="overview.auditHint">Latest server events (register / login / activation / admin).</div>
+          <ul id="overviewAudit" class="audit-list"><li class="muted" data-i18n="common.loading">Loading…</li></ul>
+        </section>
       </div>
     </section>
 
-    <section class="card">
-      <h2>Validate a license</h2>
-      <label>License YAML</label>
-      <textarea id="validateYaml" placeholder="Paste a signed license..."></textarea>
-      <div class="actions" style="margin-top:10px">
-        <button class="primary" onclick="validateLicense()">Validate</button>
-        <button class="ghost" onclick="clearValidate()">Clear</button>
-      </div>
-      <div id="validateResult" class="result hidden"></div>
-      <label style="margin-top:16px">Or validate by id</label>
-      <div class="row">
-        <input id="validateId" placeholder="lic-...">
-        <button class="ghost" onclick="validateId()">Check id</button>
-      </div>
-      <div id="publicKeyBox" class="hidden">
-        <label style="margin-top:16px">Public key (give this to Zipit clients)</label>
-        <pre id="publicKey"></pre>
-        <button class="ghost" onclick="copyText(document.getElementById('publicKey').innerText)">Copy public key</button>
-      </div>
+    <!-- Software -->
+    <section id="tab-software" class="tab-panel">
+      <section class="card">
+        <h2 data-i18n="software.createTitle">Create software</h2>
+        <div class="hint" data-i18n="software.createHint">The software id is used as authGate.software on clients. Every software has its own cards and authorization group.</div>
+        <form id="softwareForm" onsubmit="return false;">
+          <div class="form-grid">
+            <div class="field"><label for="swId" data-i18n="software.idLabel">Software ID</label><input id="swId" placeholder="my-app" spellcheck="false"></div>
+            <div class="field"><label for="swName" data-i18n="software.nameLabel">Name</label><input id="swName" placeholder="My App"></div>
+            <div class="field"><label for="swGroup" data-i18n="software.groupLabel">Group (optional)</label><input id="swGroup" placeholder="grp-my-app" spellcheck="false"></div>
+            <div class="field"><label for="swDesc" data-i18n="software.descLabel">Description</label><input id="swDesc" placeholder=""></div>
+          </div>
+          <div class="toolbar"><button class="btn primary" id="createSoftwareBtn" data-i18n="btn.create">Create software</button></div>
+        </form>
+      </section>
+      <section class="card">
+        <h2 data-i18n="software.listTitle">Software</h2>
+        <div class="hint" data-i18n="software.listHint">Disabling a software immediately blocks its login and token validation.</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="table.id">ID</th>
+              <th data-i18n="table.name">Name</th>
+              <th data-i18n="table.group">Group</th>
+              <th data-i18n="table.status">Status</th>
+              <th data-i18n="table.usersCount">Users</th>
+              <th data-i18n="table.cardsCount">Cards</th>
+              <th data-i18n="table.unusedCards">Unused</th>
+              <th data-i18n="table.created">Created</th>
+              <th data-i18n="table.actions">Actions</th>
+            </tr></thead>
+            <tbody id="softwareRows"><tr><td colspan="9" class="empty" data-i18n="common.loading">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
     </section>
-  </div>
 
-  <section class="card">
-    <h2>Client setup</h2>
-    <div class="muted">Give every build your server address. If the server is behind a
-      reverse proxy, start it with <code>--public-url https://your-domain</code> so this
-      page shows the correct URL.</div>
-    <label style="margin-top:12px">YAML (zipit.yml / saved GUI configuration)</label>
-    <pre id="clientYaml">license:
+    <!-- Cards -->
+    <section id="tab-cards" class="tab-panel">
+      <section class="card">
+        <h2 data-i18n="cards.genTitle">Generate cards</h2>
+        <div class="hint" data-i18n="cards.genHint">Codes look like PREFIX-XXXX-XXXX-XXXX, are unique, bound to one software and single-use.</div>
+        <form id="cardsForm" onsubmit="return false;">
+          <div class="form-grid">
+            <div class="field"><label for="cardSoftware" data-i18n="cards.softwareLabel">Software</label><select id="cardSoftware"></select></div>
+            <div class="field"><label for="cardCount" data-i18n="cards.countLabel">Count (1-200)</label><input id="cardCount" type="number" min="1" max="200" value="10"></div>
+            <div class="field"><label for="cardDays" data-i18n="cards.daysLabel">Valid days (0 = permanent)</label><input id="cardDays" type="number" min="0" max="36500" value="365"></div>
+            <div class="field"><label for="cardNote" data-i18n="cards.noteLabel">Note</label><input id="cardNote" placeholder=""></div>
+          </div>
+          <div class="toolbar"><button class="btn primary" id="generateCardsBtn" data-i18n="btn.generate">Generate cards</button></div>
+        </form>
+        <div id="cardsResult" class="result ok hidden">
+          <div class="row" style="justify-content:space-between">
+            <div><b id="cardsResultTitle"></b> <span class="muted" id="cardsResultMeta"></span></div>
+            <div class="row">
+              <button class="btn sm" id="copyCodesBtn" data-i18n="btn.copyAll">Copy all</button>
+              <button class="btn sm" id="exportTxtBtn" data-i18n="btn.exportTxt">Export .txt</button>
+              <button class="btn sm" id="exportCsvBtn" data-i18n="btn.exportCsv">Export .csv</button>
+            </div>
+          </div>
+          <div id="codesGrid" class="codes"></div>
+        </div>
+      </section>
+      <section class="card">
+        <h2 data-i18n="cards.listTitle">Cards</h2>
+        <div class="filters">
+          <div class="field"><label for="filterCardSoftware" data-i18n="cards.filterSoftware">Filter by software</label><select id="filterCardSoftware"><option value="" data-i18n="common.allSoftware">All software</option></select></div>
+          <div class="field"><label for="filterCardStatus" data-i18n="cards.filterStatus">Filter by status</label><select id="filterCardStatus">
+            <option value="" data-i18n="common.allStatus">All statuses</option>
+            <option value="unused" data-i18n="cardStatus.unused">Unused</option>
+            <option value="used" data-i18n="cardStatus.used">Used</option>
+            <option value="revoked" data-i18n="cardStatus.revoked">Revoked</option>
+            <option value="disabled" data-i18n="cardStatus.disabled">Disabled</option>
+          </select></div>
+          <div class="field grow"><label>&nbsp;</label><div class="row">
+            <button class="btn sm" id="reloadCardsBtn" data-i18n="btn.refreshList">Refresh</button>
+            <button class="btn sm" id="exportCardsBtn" data-i18n="btn.exportList">Export list as CSV</button>
+          </div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="table.code">Code</th>
+              <th data-i18n="table.software">Software</th>
+              <th data-i18n="table.days">Valid days</th>
+              <th data-i18n="table.note">Note</th>
+              <th data-i18n="table.status">Status</th>
+              <th data-i18n="table.usedBy">Used by</th>
+              <th data-i18n="table.usedAt">Used at</th>
+              <th data-i18n="table.batch">Batch</th>
+              <th data-i18n="table.actions">Actions</th>
+            </tr></thead>
+            <tbody id="cardRows"><tr><td colspan="9" class="empty" data-i18n="common.loading">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- Users -->
+    <section id="tab-users" class="tab-panel">
+      <section class="card">
+        <h2 data-i18n="users.title">Users</h2>
+        <div class="hint" data-i18n="users.hint">HWID is the machine fingerprint bound on first login/activation; a mismatch blocks the software. Disabling a user invalidates tokens immediately.</div>
+        <div class="filters">
+          <div class="field grow"><label for="filterUserQ" data-i18n="users.searchLabel">Search user</label><input id="filterUserQ" placeholder=""></div>
+          <div class="field"><label for="filterUserSoftware" data-i18n="users.softwareLabel">Filter by software</label><select id="filterUserSoftware"><option value="" data-i18n="common.allSoftware">All software</option></select></div>
+          <div class="field"><label>&nbsp;</label><div class="row"><button class="btn sm" id="reloadUsersBtn" data-i18n="btn.refreshList">Refresh</button></div></div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th data-i18n="table.user">User</th>
+              <th data-i18n="table.status">Status</th>
+              <th data-i18n="table.hwid">HWID</th>
+              <th data-i18n="table.auth">Authorizations</th>
+              <th data-i18n="table.created">Created</th>
+              <th data-i18n="table.actions">Actions</th>
+            </tr></thead>
+            <tbody id="userRows"><tr><td colspan="6" class="empty" data-i18n="common.loading">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+    </section>
+
+    <!-- Legacy enterprise license -->
+    <section id="tab-license" class="tab-panel">
+      <div class="grid forms">
+        <section class="card">
+          <h2 data-i18n="license.issueTitle">Issue enterprise license</h2>
+          <div class="hint" data-i18n="license.issueHint">Signed with RSA-SHA256; the issued YAML is stored in the data directory.</div>
+          <div class="form-grid" style="grid-template-columns:1fr 1fr">
+            <div class="field"><label for="licLicensee" data-i18n="license.licenseeLabel">Licensee</label><input id="licLicensee" placeholder="Acme Corp"></div>
+            <div class="field"><label for="licEdition" data-i18n="license.editionLabel">Edition</label><select id="licEdition">
+              <option value="enterprise" data-i18n="edition.enterprise">Enterprise</option>
+              <option value="professional" data-i18n="edition.professional">Professional</option>
+              <option value="evaluation" data-i18n="edition.evaluation">Evaluation</option>
+            </select></div>
+            <div class="field"><label for="licExpires" data-i18n="license.expiresLabel">Expires</label><input id="licExpires" type="date"></div>
+            <div class="field"><label for="licFeatures" data-i18n="license.featuresLabel">Features (comma separated)</label><input id="licFeatures" value="audit,policy"></div>
+          </div>
+          <div class="toolbar"><button class="btn primary" id="issueLicenseBtn" data-i18n="license.issue">Issue &amp; sign</button></div>
+          <div id="licenseResult" class="result ok hidden">
+            <div class="row" style="justify-content:space-between">
+              <b id="licenseResultTitle"></b>
+              <div class="row">
+                <button class="btn sm" id="copyLicenseYamlBtn" data-i18n="btn.copyYaml">Copy YAML</button>
+                <button class="btn sm" id="downloadLicenseYamlBtn" data-i18n="btn.downloadYml">Download .yml</button>
+              </div>
+            </div>
+            <pre id="licenseYaml"></pre>
+          </div>
+        </section>
+        <section class="card">
+          <h2 data-i18n="license.validateTitle">Validate license</h2>
+          <div class="hint" data-i18n="license.validateHint">Paste a signed YAML, or validate by license id.</div>
+          <div class="field"><label for="validateYaml" data-i18n="license.yamlLabel">License YAML</label><textarea id="validateYaml" placeholder="-----BEGIN ZIPIT LICENSE-----"></textarea></div>
+          <div class="toolbar">
+            <button class="btn primary" id="validateLicenseBtn" data-i18n="btn.validateYaml">Validate YAML</button>
+            <button class="btn" id="validateIdBtn" data-i18n="btn.validateId">Validate by ID</button>
+          </div>
+          <div class="field" style="margin-top:10px"><label for="validateId" data-i18n="license.idLabel">License ID</label><input id="validateId" placeholder="lic-..."></div>
+          <div id="validateResult" class="result hidden"></div>
+          <div class="toolbar"><button class="btn" id="publicKeyBtn" data-i18n="btn.showKey">Show public key</button></div>
+          <pre id="publicKeyBox" class="yaml hidden"></pre>
+        </section>
+      </div>
+
+      <section class="card">
+        <h2 data-i18n="license.listTitle">Issued licenses</h2>
+        <div class="row" style="justify-content:space-between;margin-bottom:11px">
+          <div class="muted" id="licenseTableEmpty"></div>
+          <button class="btn sm" id="reloadLicensesBtn" data-i18n="btn.refreshList">Refresh</button>
+        </div>
+        <div class="table-wrap">
+          <table id="licenseTable">
+            <thead><tr>
+              <th data-i18n="table.id">ID</th>
+              <th data-i18n="table.licensee">Licensee</th>
+              <th data-i18n="table.edition">Edition</th>
+              <th data-i18n="table.expires">Expires</th>
+              <th data-i18n="table.features">Features</th>
+              <th data-i18n="table.status">Status</th>
+              <th data-i18n="table.created">Created</th>
+              <th data-i18n="table.actions">Actions</th>
+            </tr></thead>
+            <tbody id="licenseRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2 data-i18n="license.clientTitle">Client setup</h2>
+        <div class="hint" data-i18n="license.clientHint">Enterprise license client configuration. For multi-software authorization use the authGate section; the server URL is filled in automatically.</div>
+        <div class="grid forms">
+          <div>
+            <div class="field"><label data-i18n="license.clientLicenseYaml">license YAML (enterprise)</label>
+              <pre id="clientLicenseYaml" class="yaml">license:
   enabled: true
   file: "license.yml"
   publicKey: "public.pem"
@@ -165,283 +536,1551 @@
   require: true
   features:
     - audit</pre>
-    <div class="actions">
-      <button onclick="copyText(document.getElementById('clientYaml').innerText)">Copy YAML</button>
-    </div>
-    <label style="margin-top:12px">Command line</label>
-    <pre id="clientCli">--license license.yml --license-key public.pem --license-server {{PUBLIC_URL}} --require-license</pre>
-    <div class="actions">
-      <button onclick="copyText(document.getElementById('clientCli').innerText)">Copy command</button>
-    </div>
-    <div class="muted" style="margin-top:10px">Or set the environment variable
-      <code>ZIPIT_LICENSE_SERVER={{PUBLIC_URL}}</code>. Clients verify the RSA signature
-      locally and use this server only for revocation and online validation.</div>
-  </section>
+            </div>
+            <div class="toolbar"><button class="btn sm" id="copyClientYamlBtn" data-i18n="btn.copyClientYaml">Copy YAML</button></div>
+          </div>
+          <div>
+            <div class="field"><label data-i18n="license.clientAuthYaml">authGate YAML (multi-software)</label>
+              <pre id="clientAuthYaml" class="yaml">authGate:
+  enabled: true
+  server: "{{PUBLIC_URL}}"
+  software: "my-app"
+  title: "My App"
+  register: true
+  cacheFile: ""
+  timeoutMs: 5000
+  entryPoints: []</pre>
+            </div>
+            <div class="toolbar"><button class="btn sm" id="copyClientAuthBtn" data-i18n="btn.copyAuthYaml">Copy authGate YAML</button></div>
+          </div>
+        </div>
+        <div class="field" style="margin-top:13px"><label data-i18n="license.clientCli">CLI</label>
+          <pre class="yaml">--auth-gate --auth-server {{PUBLIC_URL}} --auth-software my-app --auth-title "My App"</pre>
+        </div>
+        <div class="muted" style="margin-top:9px;font-size:12px" data-i18n="license.clientEnv">Environment ZIPIT_LICENSE_SERVER={{PUBLIC_URL}}. Clients verify the RSA signature locally and only query this server for revocation, online validation and multi-software authorization.</div>
+      </section>
+    </section>
+  </main>
 
-  <section class="card">
-    <h2>Issued licenses</h2>
-    <div class="muted" id="tableEmpty">No licenses yet.</div>
-    <table id="licenseTable" class="hidden">
-      <thead>
-        <tr><th>Id</th><th>Licensee</th><th>Edition</th><th>Expires</th><th>Features</th><th>Status</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="licenseRows"></tbody>
-    </table>
-  </section>
-</main>
+  <footer>
+    <div data-i18n="footer.storage">Zipit License Server · data is stored in the server data directory (atomic TSV). Bind to 127.0.0.1 or put an authenticated reverse proxy in front.</div>
+    <div><span data-i18n="footer.api">Admin API</span>: <code>/api/admin/*</code> · <span data-i18n="footer.clientApi">Client API</span>: <code>/api/auth/*</code></div>
+  </footer>
+</div>
 
-<footer>
-  Zipit License Server · data is stored next to the server process. Bind to localhost
-  unless you have put an authenticating reverse proxy in front of it.
-</footer>
+<div id="toasts" class="toasts"></div>
 
 <script>
-const $ = id => document.getElementById(id);
-let adminToken = localStorage.getItem("zipit.adminToken") || "";
-let lastIssued = null;
+(function () {
+  "use strict";
 
-function authHeaders(extra) {
-  const headers = Object.assign({}, extra || {});
-  if (adminToken) headers["X-Admin-Token"] = adminToken;
-  return headers;
-}
+  /* ================================================================
+   * i18n dictionaries (single-language display; data values are not
+   * translated). Keys are used through t(); zh/en must stay in sync.
+   * ================================================================ */
+  var I18N = {
+    en: {
+      "app.title": "Zipit Auth Console",
+      "brand.sub": "Multi-Software Authorization Console",
+      "btn.refresh": "Refresh",
+      "btn.logout": "Sign out",
+      "btn.enable": "Enable",
+      "btn.disable": "Disable",
+      "btn.copy": "Copy",
+      "btn.copyAll": "Copy all",
+      "btn.copyYaml": "Copy YAML",
+      "btn.copyAuthYaml": "Copy authGate YAML",
+      "btn.copyClientYaml": "Copy YAML",
+      "btn.downloadYml": "Download .yml",
+      "btn.create": "Create software",
+      "btn.generate": "Generate cards",
+      "btn.generateCards": "Generate cards",
+      "btn.refreshList": "Refresh",
+      "btn.exportTxt": "Export .txt",
+      "btn.exportCsv": "Export .csv",
+      "btn.exportList": "Export list as CSV",
+      "btn.setHwid": "Set HWID",
+      "btn.resetHwid": "Reset HWID",
+      "btn.issue": "Issue & sign",
+      "btn.validateYaml": "Validate YAML",
+      "btn.validateId": "Validate by ID",
+      "btn.showKey": "Show public key",
+      "btn.renew": "Renew",
+      "btn.revoke": "Revoke",
+      "btn.download": "Download",
+      "login.title": "Admin Sign-in",
+      "login.hint": "Enter the token configured with --admin-token. A local test server without a token can enter directly.",
+      "login.token": "Admin Token",
+      "login.enter": "Enter console",
+      "login.skip": "Continue without token",
+      "login.server": "Server {url}",
+      "login.errToken": "Please enter the Admin Token.",
+      "login.errInvalid": "Invalid or expired Admin Token, please try again.",
+      "login.errConnect": "Cannot reach the admin API: {error}",
+      "nav.overview": "Overview",
+      "nav.software": "Software",
+      "nav.cards": "Cards",
+      "nav.users": "Users",
+      "nav.license": "License",
+      "common.loading": "Loading…",
+      "common.empty": "No data",
+      "common.permanent": "Permanent",
+      "common.days": "{n} days",
+      "common.forever": "—",
+      "common.allSoftware": "All software",
+      "common.allStatus": "All statuses",
+      "common.copy": "Copy",
+      "common.never": "—",
+      "stat.software": "Software",
+      "stat.users": "Users",
+      "stat.unused": "Unused cards",
+      "stat.used": "Used cards",
+      "stat.memberships": "Authorizations",
+      "stat.softwareFoot": "Registered products",
+      "stat.usersFoot": "Registered accounts",
+      "stat.unusedFoot": "Revoked {revoked} · total {total}",
+      "stat.usedFoot": "Activated",
+      "stat.membershipsFoot": "Active {active}",
+      "overview.recent": "Recent activations",
+      "overview.recentHint": "Latest 10 software authorization activations.",
+      "overview.recentEmpty": "No activations yet. Generate cards on the Cards tab, then register and activate.",
+      "overview.audit": "Audit trail",
+      "overview.auditHint": "Latest server events (register / login / activation / admin).",
+      "overview.auditEmpty": "No audit events yet.",
+      "overview.auditFailed": "Failed to load audit events: {error}",
+      "table.user": "User",
+      "table.software": "Software",
+      "table.group": "Group",
+      "table.activated": "Activated",
+      "table.code": "Code",
+      "table.days": "Valid days",
+      "table.note": "Note",
+      "table.status": "Status",
+      "table.usedBy": "Used by",
+      "table.usedAt": "Used at",
+      "table.batch": "Batch",
+      "table.actions": "Actions",
+      "table.id": "ID",
+      "table.name": "Name",
+      "table.usersCount": "Users",
+      "table.cardsCount": "Cards",
+      "table.unusedCards": "Unused",
+      "table.created": "Created",
+      "table.hwid": "HWID",
+      "table.auth": "Authorizations",
+      "table.licensee": "Licensee",
+      "table.edition": "Edition",
+      "table.expires": "Expires",
+      "table.features": "Features",
+      "software.createTitle": "Create software",
+      "software.createHint": "The software id is used as authGate.software on clients. Every software has its own cards and authorization group.",
+      "software.idLabel": "Software ID",
+      "software.nameLabel": "Name",
+      "software.groupLabel": "Group (optional)",
+      "software.descLabel": "Description",
+      "software.listTitle": "Software",
+      "software.listHint": "Disabling a software immediately blocks its login and token validation.",
+      "software.empty": "No software yet — create the first one above.",
+      "software.createdToast": "Software created: {id}",
+      "software.toggledToast": "Software {id} is now {state}",
+      "cards.genTitle": "Generate cards",
+      "cards.genHint": "Codes look like PREFIX-XXXX-XXXX-XXXX, are unique, bound to one software and single-use.",
+      "cards.softwareLabel": "Software",
+      "cards.countLabel": "Count (1-200)",
+      "cards.daysLabel": "Valid days (0 = permanent)",
+      "cards.noteLabel": "Note",
+      "cards.listTitle": "Cards",
+      "cards.filterSoftware": "Filter by software",
+      "cards.filterStatus": "Filter by status",
+      "cards.empty": "No matching cards — generate a batch first.",
+      "cards.generatedTitle": "Generated {n} cards",
+      "cards.generatedMeta": "batch {batch} · software {software}",
+      "cards.generatedToast": "Generated {n} cards",
+      "cards.revokeConfirm": "Revoke unused card {code}?",
+      "cards.revokedToast": "Card revoked: {code}",
+      "cards.needSoftware": "Create a software on the Software tab first.",
+      "cards.noCodesExport": "No freshly generated cards to export.",
+      "cards.listEmptyToast": "The current list is empty.",
+      "users.title": "Users",
+      "users.hint": "HWID is the machine fingerprint bound on first login/activation; a mismatch blocks the software. Disabling a user invalidates tokens immediately.",
+      "users.searchLabel": "Search user",
+      "users.softwareLabel": "Filter by software",
+      "users.empty": "No matching users.",
+      "users.noAuth": "No authorization",
+      "users.revokeConfirm": "Revoke this user's authorization for the software? Its token becomes invalid immediately.",
+      "users.revokeToast": "Authorization revoked: {software}",
+      "users.toggleToast": "User {name} is now {state}",
+      "users.resetConfirm": "Clear this user's HWID binding? The next machine to log in or activate will bind instead.",
+      "users.resetToast": "HWID binding reset for {name}",
+      "users.setPrompt": "Set or rebind HWID (16-128 chars of [A-Za-z0-9_-]; empty cancels)",
+      "users.setEmptyWarn": "Cancelled: HWID cannot be empty; use Reset HWID to unbind.",
+      "users.setToast": "HWID set for {name}",
+      "users.setInvalid": "Invalid HWID: 16-128 characters of [A-Za-z0-9_-].",
+      "license.issueTitle": "Issue enterprise license",
+      "license.issueHint": "Signed with RSA-SHA256; the issued YAML is stored in the data directory.",
+      "license.licenseeLabel": "Licensee",
+      "license.editionLabel": "Edition",
+      "license.expiresLabel": "Expires",
+      "license.featuresLabel": "Features (comma separated)",
+      "license.issue": "Issue & sign",
+      "license.issuedTitle": "Issued {id}",
+      "license.issuedToast": "Enterprise license issued: {id}",
+      "license.licenseeRequired": "Please enter a licensee.",
+      "license.validateTitle": "Validate license",
+      "license.validateHint": "Paste a signed YAML, or validate by license id.",
+      "license.yamlLabel": "License YAML",
+      "license.idLabel": "License ID",
+      "license.valid": "Valid",
+      "license.invalid": "Invalid",
+      "license.validateFailed": "Validation failed: {error}",
+      "license.pasteFirst": "Paste a license YAML first.",
+      "license.enterId": "Enter a license id.",
+      "license.listTitle": "Issued licenses",
+      "license.listEmpty": "No enterprise licenses issued yet.",
+      "license.listLoadFailed": "Failed to load licenses: {error}",
+      "license.revokeConfirm": "Revoke enterprise license {id}?",
+      "license.revokedToast": "License revoked: {id}",
+      "license.renewedTitle": "Renewed {id}",
+      "license.renewedToast": "License renewed: {id}",
+      "license.renewPrompt": "New expiry date (YYYY-MM-DD)",
+      "license.downloaded": "Downloaded {id}.yml",
+      "license.downloadFailed": "Download failed: {error}",
+      "license.statusActive": "Valid",
+      "license.statusRevoked": "Revoked",
+      "license.statusExpired": "Expired",
+      "license.clientTitle": "Client setup",
+      "license.clientHint": "Enterprise license client configuration. For multi-software authorization use the authGate section; the server URL is filled in automatically.",
+      "license.clientLicenseYaml": "license YAML (enterprise)",
+      "license.clientAuthYaml": "authGate YAML (multi-software)",
+      "license.clientCli": "CLI",
+      "license.clientEnv": "Environment ZIPIT_LICENSE_SERVER={{PUBLIC_URL}}. Clients verify the RSA signature locally and only query this server for revocation, online validation and multi-software authorization.",
+      "license.yamlRequired": "Paste a license YAML first.",
+      "cardStatus.unused": "Unused",
+      "cardStatus.used": "Used",
+      "cardStatus.revoked": "Revoked",
+      "cardStatus.disabled": "Disabled",
+      "memberStatus.active": "active",
+      "memberStatus.expired": "expired",
+      "memberStatus.revoked": "revoked",
+      "tag.enabled": "Enabled",
+      "tag.disabled": "Disabled",
+      "tag.bound": "Bound",
+      "tag.unbound": "Not bound",
+      "userStatus.disabled": "Disabled",
+      "userStatus.normal": "Active",
+      "edition.enterprise": "Enterprise",
+      "edition.professional": "Professional",
+      "edition.evaluation": "Evaluation",
+      "state.enabled": "enabled",
+      "state.disabled": "disabled",
+      "health.running": "online",
+      "health.error": "error",
+      "health.offline": "offline",
+      "health.connecting": "connecting…",
+      "toast.connected": "Connected to {url}",
+      "toast.refreshed": "Refreshed",
+      "toast.copied": "Copied to clipboard",
+      "toast.copyFailed": "Copy failed — select the text manually",
+      "toast.loggedOut": "Signed out.",
+      "footer.storage": "Zipit License Server · data is stored in the server data directory (atomic TSV). Bind to 127.0.0.1 or put an authenticated reverse proxy in front.",
+      "footer.api": "Admin API",
+      "footer.clientApi": "Client API",
+      "error.adminToken": "Admin Token is invalid or expired, please re-enter.",
+      "error.connect": "Cannot reach the admin API: {error}",
+      "error.unknown": "Unknown error"
+    },
+    zh: {
+      "app.title": "Zipit 授权控制台",
+      "brand.sub": "多软件授权控制台",
+      "btn.refresh": "刷新",
+      "btn.logout": "退出",
+      "btn.enable": "启用",
+      "btn.disable": "禁用",
+      "btn.copy": "复制",
+      "btn.copyAll": "复制全部",
+      "btn.copyYaml": "复制 YAML",
+      "btn.copyAuthYaml": "复制 authGate YAML",
+      "btn.copyClientYaml": "复制 YAML",
+      "btn.downloadYml": "下载 .yml",
+      "btn.create": "创建软件",
+      "btn.generate": "生成卡密",
+      "btn.generateCards": "生成卡密",
+      "btn.refreshList": "刷新",
+      "btn.exportTxt": "导出 .txt",
+      "btn.exportCsv": "导出 .csv",
+      "btn.exportList": "导出当前列表 CSV",
+      "btn.setHwid": "设置 HWID",
+      "btn.resetHwid": "重置 HWID",
+      "btn.issue": "签发并签名",
+      "btn.validateYaml": "验证 YAML",
+      "btn.validateId": "按 ID 验证",
+      "btn.showKey": "显示公钥",
+      "btn.renew": "续期",
+      "btn.revoke": "作废",
+      "btn.download": "下载",
+      "login.title": "管理员登录",
+      "login.hint": "输入服务端 --admin-token 设置的令牌；未设置令牌的本机测试服务器可直接进入。",
+      "login.token": "管理令牌",
+      "login.enter": "进入控制台",
+      "login.skip": "免令牌进入",
+      "login.server": "服务器 {url}",
+      "login.errToken": "请输入管理令牌。",
+      "login.errInvalid": "管理令牌无效或已失效，请重新输入。",
+      "login.errConnect": "无法连接管理接口：{error}",
+      "nav.overview": "概览",
+      "nav.software": "软件",
+      "nav.cards": "卡密",
+      "nav.users": "用户",
+      "nav.license": "许可证",
+      "common.loading": "加载中…",
+      "common.empty": "暂无数据",
+      "common.permanent": "永久",
+      "common.days": "{n} 天",
+      "common.forever": "—",
+      "common.allSoftware": "全部软件",
+      "common.allStatus": "全部状态",
+      "common.copy": "复制",
+      "common.never": "—",
+      "stat.software": "软件",
+      "stat.users": "用户",
+      "stat.unused": "未用卡密",
+      "stat.used": "已用卡密",
+      "stat.memberships": "授权数",
+      "stat.softwareFoot": "已注册产品",
+      "stat.usersFoot": "已注册账号",
+      "stat.unusedFoot": "作废 {revoked} · 总计 {total}",
+      "stat.usedFoot": "已激活",
+      "stat.membershipsFoot": "有效 {active}",
+      "overview.recent": "最近激活",
+      "overview.recentHint": "最新 10 条软件授权激活记录。",
+      "overview.recentEmpty": "暂无激活记录，请先在「卡密」生成卡密，再注册并激活。",
+      "overview.audit": "审计事件",
+      "overview.auditHint": "服务端最近事件（注册 / 登录 / 激活 / 管理操作）。",
+      "overview.auditEmpty": "暂无审计事件。",
+      "overview.auditFailed": "审计事件加载失败：{error}",
+      "table.user": "用户",
+      "table.software": "软件",
+      "table.group": "授权组",
+      "table.activated": "激活时间",
+      "table.code": "卡密",
+      "table.days": "有效天数",
+      "table.note": "备注",
+      "table.status": "状态",
+      "table.usedBy": "使用者",
+      "table.usedAt": "使用时间",
+      "table.batch": "批次",
+      "table.actions": "操作",
+      "table.id": "ID",
+      "table.name": "名称",
+      "table.usersCount": "用户数",
+      "table.cardsCount": "卡密数",
+      "table.unusedCards": "未用卡密",
+      "table.created": "创建时间",
+      "table.hwid": "HWID 硬件绑定",
+      "table.auth": "授权（软件:组:状态:到期）",
+      "table.licensee": "被授权方",
+      "table.edition": "版本",
+      "table.expires": "到期",
+      "table.features": "特性",
+      "software.createTitle": "新建软件",
+      "software.createHint": "软件 id 用于客户端 authGate.software；每个软件拥有独立卡密与授权组，授权互不越权。",
+      "software.idLabel": "软件 ID",
+      "software.nameLabel": "名称",
+      "software.groupLabel": "授权组（可选）",
+      "software.descLabel": "描述",
+      "software.listTitle": "软件列表",
+      "software.listHint": "禁用软件会立即阻止其登录与 token 校验；启用状态切换即时生效。",
+      "software.empty": "还没有软件，请在上方创建第一个。",
+      "software.createdToast": "软件已创建：{id}",
+      "software.toggledToast": "软件 {id} 已{state}",
+      "cards.genTitle": "批量生成卡密",
+      "cards.genHint": "卡密格式 PREFIX-XXXX-XXXX-XXXX，全局唯一、绑定单一软件、一次性使用。",
+      "cards.softwareLabel": "软件",
+      "cards.countLabel": "数量（1-200）",
+      "cards.daysLabel": "有效天数（0 = 永久）",
+      "cards.noteLabel": "备注",
+      "cards.listTitle": "卡密列表",
+      "cards.filterSoftware": "软件筛选",
+      "cards.filterStatus": "状态筛选",
+      "cards.empty": "没有匹配的卡密，请先生成一批。",
+      "cards.generatedTitle": "已生成 {n} 个卡密",
+      "cards.generatedMeta": "批次 {batch} · 软件 {software}",
+      "cards.generatedToast": "已生成 {n} 个卡密",
+      "cards.revokeConfirm": "确认作废未使用卡密 {code} ？",
+      "cards.revokedToast": "卡密已作废：{code}",
+      "cards.needSoftware": "请先在「软件」页创建软件。",
+      "cards.noCodesExport": "当前没有刚生成的卡密可导出。",
+      "cards.listEmptyToast": "当前列表为空。",
+      "users.title": "用户列表",
+      "users.hint": "HWID 为首次登录/激活时绑定的机器指纹，不一致时拒绝运行；禁用用户会立即使其 token 失效。",
+      "users.searchLabel": "搜索用户名",
+      "users.softwareLabel": "软件筛选",
+      "users.empty": "没有匹配的用户。",
+      "users.noAuth": "无授权",
+      "users.revokeConfirm": "确认撤销该用户对此软件的授权？其 token 将立即失效。",
+      "users.revokeToast": "已撤销授权：{software}",
+      "users.toggleToast": "用户 {name} 已{state}",
+      "users.resetConfirm": "确认清除该用户 HWID 绑定？下次登录/激活的机器将重新绑定。",
+      "users.resetToast": "已重置 {name} 的 HWID 绑定",
+      "users.setPrompt": "设置/换绑 HWID（16-128 位，[A-Za-z0-9_-]；留空取消）",
+      "users.setEmptyWarn": "已取消：HWID 不能为空，如需解绑请用「重置 HWID」。",
+      "users.setToast": "已设置 {name} 的 HWID",
+      "users.setInvalid": "HWID 无效：需 16-128 位 [A-Za-z0-9_-]。",
+      "license.issueTitle": "签发企业许可证",
+      "license.issueHint": "RSA-SHA256 签名，签发内容写入数据目录。",
+      "license.licenseeLabel": "被授权方",
+      "license.editionLabel": "版本",
+      "license.expiresLabel": "到期日",
+      "license.featuresLabel": "特性（逗号分隔）",
+      "license.issue": "签发并签名",
+      "license.issuedTitle": "已签发 {id}",
+      "license.issuedToast": "企业许可证已签发：{id}",
+      "license.licenseeRequired": "请输入被授权方。",
+      "license.validateTitle": "验证许可证",
+      "license.validateHint": "粘贴签名 YAML，或按许可证 id 校验。",
+      "license.yamlLabel": "许可证 YAML",
+      "license.idLabel": "许可证 ID",
+      "license.valid": "有效",
+      "license.invalid": "无效",
+      "license.validateFailed": "验证失败：{error}",
+      "license.pasteFirst": "请先粘贴许可证 YAML。",
+      "license.enterId": "请输入许可证 id。",
+      "license.listTitle": "许可证列表",
+      "license.listEmpty": "还没有签发企业许可证。",
+      "license.listLoadFailed": "许可证加载失败：{error}",
+      "license.revokeConfirm": "确认作废企业许可证 {id} ？",
+      "license.revokedToast": "许可证已作废：{id}",
+      "license.renewedTitle": "已续期 {id}",
+      "license.renewedToast": "许可证已续期：{id}",
+      "license.renewPrompt": "新的到期日 (YYYY-MM-DD)",
+      "license.downloaded": "已下载 {id}.yml",
+      "license.downloadFailed": "下载失败：{error}",
+      "license.statusActive": "有效",
+      "license.statusRevoked": "已作废",
+      "license.statusExpired": "已过期",
+      "license.clientTitle": "客户端配置",
+      "license.clientHint": "企业许可证客户端配置；多软件授权请使用 authGate 段，服务器地址已自动填充。",
+      "license.clientLicenseYaml": "license YAML（企业许可证）",
+      "license.clientAuthYaml": "authGate YAML（多软件授权）",
+      "license.clientCli": "命令行",
+      "license.clientEnv": "环境变量 ZIPIT_LICENSE_SERVER={{PUBLIC_URL}}。客户端本地校验 RSA 签名，仅向本服务器查询吊销、在线验证与多软件授权。",
+      "license.yamlRequired": "请先粘贴许可证 YAML。",
+      "cardStatus.unused": "未使用",
+      "cardStatus.used": "已使用",
+      "cardStatus.revoked": "已作废",
+      "cardStatus.disabled": "已禁用",
+      "memberStatus.active": "有效",
+      "memberStatus.expired": "已过期",
+      "memberStatus.revoked": "已撤销",
+      "tag.enabled": "启用",
+      "tag.disabled": "禁用",
+      "tag.bound": "已绑定",
+      "tag.unbound": "未绑定",
+      "userStatus.disabled": "已禁用",
+      "userStatus.normal": "正常",
+      "edition.enterprise": "企业版",
+      "edition.professional": "专业版",
+      "edition.evaluation": "评估版",
+      "state.enabled": "启用",
+      "state.disabled": "禁用",
+      "health.running": "运行中",
+      "health.error": "异常",
+      "health.offline": "离线",
+      "health.connecting": "连接中…",
+      "toast.connected": "已连接 {url}",
+      "toast.refreshed": "已刷新",
+      "toast.copied": "已复制到剪贴板",
+      "toast.copyFailed": "复制失败，请手动选择文本",
+      "toast.loggedOut": "已退出管理控制台。",
+      "footer.storage": "Zipit 授权服务器 · 数据保存在服务端数据目录（原子 TSV）。请绑定 127.0.0.1 或置于认证反向代理之后。",
+      "footer.api": "管理接口",
+      "footer.clientApi": "客户端接口",
+      "error.adminToken": "管理令牌无效或已失效，请重新输入。",
+      "error.connect": "无法连接管理接口：{error}",
+      "error.unknown": "未知错误"
+    }
+  };
 
-async function api(path, options) {
-  const request = Object.assign({}, options || {});
-  request.headers = authHeaders(request.headers);
-  const response = await fetch(path, request);
-  const text = await response.text();
-  let data;
-  try { data = JSON.parse(text); } catch (e) { data = {error: text}; }
-  if (response.status === 401) throw new Error("Admin token required");
-  if (!response.ok) throw new Error(data.error || data.reason || ("HTTP " + response.status));
-  return data;
-}
+  /* ================================================================
+   * state / helpers
+   * ================================================================ */
+  var $ = function (id) { return document.getElementById(id); };
+  var state = {
+    lang: detectLang(),
+    token: localStorage.getItem("zipit.adminToken") || "",
+    info: null,
+    tab: "overview",
+    software: [],
+    cards: [],
+    users: [],
+    lastCodes: [],
+    lastBatch: "",
+    lastCreatedLicense: "",
+    authenticated: false
+  };
 
-function esc(value) {
-  return String(value == null ? "" : value)
-    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-}
-
-function today() { return new Date().toISOString().slice(0, 10); }
-
-function defaultExpiry() {
-  const d = new Date(Date.now() + 365 * 86400000);
-  return d.toISOString().slice(0, 10);
-}
-
-async function loadAll() {
-  try {
-    const list = await api("/api/licenses");
-    render(list);
-  } catch (e) {
-    console.error(e);
+  function detectLang() {
+    try {
+      var saved = localStorage.getItem("zipit.adminLang");
+      if (saved === "zh" || saved === "en") return saved;
+    } catch (e) { /* ignore */ }
+    var nav = (navigator.language || navigator.userLanguage || "en").toLowerCase();
+    return nav.indexOf("zh") === 0 ? "zh" : "en";
   }
-}
 
-function statusOf(record) {
-  if (record.revoked) return "revoked";
-  const expires = new Date(record.expires + "T23:59:59");
-  if (!isNaN(expires.getTime()) && expires < new Date()) return "expired";
-  return "active";
-}
-
-function render(list) {
-  const rows = $("licenseRows");
-  rows.innerHTML = "";
-  let active = 0, revoked = 0;
-  const editions = new Set();
-  list.forEach(record => {
-    const status = statusOf(record);
-    if (status === "active") active++;
-    if (status === "revoked") revoked++;
-    editions.add(record.edition);
-    const tr = document.createElement("tr");
-    tr.innerHTML =
-      "<td><code>" + esc(record.id) + "</code></td>" +
-      "<td>" + esc(record.licensee) + "</td>" +
-      "<td>" + esc(record.edition) + "</td>" +
-      "<td>" + esc(record.expires) + "</td>" +
-      "<td class='muted'>" + esc((record.features || []).join(", ")) + "</td>" +
-      "<td><span class='pill " + status + "'>" + status + "</span></td>" +
-      "<td><div class='actions'>" +
-        "<button onclick=\"downloadLicense('" + esc(record.id) + "')\">Download</button>" +
-        "<button onclick=\"copyLicense('" + esc(record.id) + "')\">Copy</button>" +
-        (status === "revoked" ? "" :
-          "<button onclick=\"renewLicense('" + esc(record.id) + "')\">Renew</button>" +
-          "<button class='danger' onclick=\"revoke('" + esc(record.id) + "')\">Revoke</button>") +
-      "</div></td>";
-    rows.appendChild(tr);
-  });
-  $("statTotal").textContent = list.length;
-  $("statActive").textContent = active;
-  $("statRevoked").textContent = revoked;
-  $("statEditions").textContent = editions.size;
-  $("licenseTable").classList.toggle("hidden", list.length === 0);
-  $("tableEmpty").classList.toggle("hidden", list.length !== 0);
-}
-
-function selectedFeatures() {
-  const features = [];
-  document.querySelectorAll(".chip input:checked").forEach(input => features.push(input.value));
-  const extra = $("extraFeatures").value.split(",").map(v => v.trim()).filter(Boolean);
-  extra.forEach(value => { if (!features.includes(value)) features.push(value); });
-  return features;
-}
-
-async function createLicense() {
-  const licensee = $("licensee").value.trim();
-  const expires = $("expires").value || defaultExpiry();
-  if (!licensee) { alert("Licensee is required"); return; }
-  const body = new URLSearchParams({
-    licensee: licensee,
-    edition: $("edition").value,
-    expires: expires,
-    features: selectedFeatures().join(",")
-  });
-  try {
-    const record = await api("/api/licenses", {method: "POST", body: body});
-    showIssued(record);
-    await loadAll();
-  } catch (e) {
-    alert("Issue failed: " + e.message);
+  function t(key, params) {
+    var dict = I18N[state.lang] || I18N.en;
+    var value = dict[key];
+    if (value === undefined) value = I18N.en[key];
+    if (value === undefined) return key;
+    if (params) {
+      Object.keys(params).forEach(function (name) {
+        value = value.split("{" + name + "}").join(String(params[name]));
+      });
+    }
+    return value;
   }
-}
 
-function showIssued(record) {
-  lastIssued = record;
-  $("createResult").classList.remove("hidden");
-  $("createdMeta").textContent = record.id + " · " + record.licensee + " · " + record.expires;
-  $("createdYaml").textContent = record.license;
-  $("createdDownload").onclick = () => downloadLicense(record.id);
-}
+  function esc(value) {
+    return String(value === null || value === undefined ? "" : value)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
 
-async function renewLicense(id) {
-  const expires = prompt("New expiry (YYYY-MM-DD)", defaultExpiry());
-  if (!expires) return;
-  try {
-    const record = await api("/api/licenses/" + encodeURIComponent(id) + "/renew", {
-      method: "POST",
-      body: new URLSearchParams({expires: expires})
+  function fmtTs(ms) {
+    if (!ms) return "—";
+    var d = new Date(Number(ms));
+    if (isNaN(d.getTime())) return "—";
+    var pad = function (n) { return n < 10 ? "0" + n : "" + n; };
+    return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate())
+      + " " + pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  function fmtDays(days) {
+    var n = Number(days || 0);
+    return n > 0 ? t("common.days", { n: n }) : t("common.permanent");
+  }
+
+  function fmtExpires(expiresAt) {
+    return expiresAt ? fmtTs(expiresAt) : t("common.permanent");
+  }
+
+  function statusTag(tone, label) {
+    return '<span class="status ' + tone + '">' + esc(label) + '</span>';
+  }
+
+  function cardStatusTag(status) {
+    var map = {
+      unused: ["ok", "cardStatus.unused"],
+      used: ["warn", "cardStatus.used"],
+      revoked: ["bad", "cardStatus.revoked"],
+      disabled: ["muted", "cardStatus.disabled"]
+    };
+    var entry = map[status] || ["muted", null];
+    return statusTag(entry[0], entry[1] ? t(entry[1]) : status);
+  }
+
+  function memberStatusTag(status) {
+    var map = {
+      active: ["ok", "memberStatus.active"],
+      expired: ["warn", "memberStatus.expired"],
+      revoked: ["bad", "memberStatus.revoked"]
+    };
+    var entry = map[status] || ["muted", null];
+    return statusTag(entry[0], entry[1] ? t(entry[1]) : status);
+  }
+
+  function licenseStatusTag(status) {
+    if (status === "active") return statusTag("ok", t("license.statusActive"));
+    if (status === "revoked") return statusTag("bad", t("license.statusRevoked"));
+    if (status === "expired") return statusTag("warn", t("license.statusExpired"));
+    return statusTag("muted", status);
+  }
+
+  function authHeaders(extra) {
+    var headers = extra || {};
+    if (state.token) headers["X-Admin-Token"] = state.token;
+    return headers;
+  }
+
+  function toParams(params) {
+    var body = new URLSearchParams();
+    Object.keys(params || {}).forEach(function (key) {
+      var value = params[key];
+      if (value !== undefined && value !== null) body.append(key, value);
     });
-    showIssued(record);
-    await loadAll();
-  } catch (e) {
-    alert("Renew failed: " + e.message);
+    return body;
   }
-}
 
-async function downloadLicense(id) {
-  try {
-    const response = await fetch("/api/licenses/" + encodeURIComponent(id) + "/download",
-      {headers: authHeaders()});
-    if (response.status === 401) throw new Error("Admin token required");
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    const blob = await response.blob();
-    const link = document.createElement("a");
+  function toast(message, type) {
+    var box = $("toasts");
+    var el = document.createElement("div");
+    el.className = "toast " + (type || "");
+    el.textContent = message;
+    box.appendChild(el);
+    while (box.children.length > 4) box.removeChild(box.firstChild);
+    setTimeout(function () {
+      el.style.transition = "opacity .25s";
+      el.style.opacity = "0";
+      setTimeout(function () { if (el.parentNode) box.removeChild(el); }, 280);
+    }, type === "error" ? 5200 : 3200);
+  }
+
+  function copyText(text) {
+    var value = String(text === null || text === undefined ? "" : text);
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(value).then(function () { toast(t("toast.copied"), "ok"); },
+        function () { fallbackCopy(value); });
+    } else {
+      fallbackCopy(value);
+    }
+  }
+
+  function fallbackCopy(text) {
+    var area = document.createElement("textarea");
+    area.value = text;
+    area.style.position = "fixed";
+    area.style.opacity = "0";
+    document.body.appendChild(area);
+    area.select();
+    try { document.execCommand("copy"); toast(t("toast.copied"), "ok"); }
+    catch (e) { toast(t("toast.copyFailed"), "warn"); }
+    document.body.removeChild(area);
+  }
+
+  function downloadText(filename, text, mime) {
+    var blob = new Blob([text], { type: (mime || "text/plain") + ";charset=utf-8" });
+    var link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
-    link.download = id + ".yml";
+    link.download = filename;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-  } catch (e) {
-    alert("Download failed: " + e.message);
+    setTimeout(function () { URL.revokeObjectURL(link.href); }, 1500);
   }
-}
 
-async function revoke(id) {
-  if (!confirm("Revoke " + id + "?")) return;
-  try {
-    await api("/api/licenses/" + encodeURIComponent(id) + "/revoke", {method: "POST"});
-    await loadAll();
-  } catch (e) {
-    alert("Revoke failed: " + e.message);
+  /* ---------------- i18n application ---------------- */
+  function applyStaticI18n() {
+    document.querySelectorAll("[data-i18n]").forEach(function (el) {
+      el.textContent = t(el.getAttribute("data-i18n"));
+    });
+    document.querySelectorAll("[data-i18n-placeholder]").forEach(function (el) {
+      el.setAttribute("placeholder", t(el.getAttribute("data-i18n-placeholder")));
+    });
+    document.querySelectorAll("[data-i18n-title]").forEach(function (el) {
+      el.setAttribute("title", t(el.getAttribute("data-i18n-title")));
+    });
+    document.documentElement.lang = state.lang === "zh" ? "zh-CN" : "en";
+    document.title = t("app.title") + " · ZIPIT LICENSE SERVER";
+    updateLangButtons();
+    updateLoginServer();
   }
-}
 
-async function copyLicense(id) {
-  try {
-    const response = await fetch("/api/licenses/" + encodeURIComponent(id) + "/download",
-      {headers: authHeaders()});
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    copyText(await response.text());
-  } catch (e) {
-    alert("Copy failed: " + e.message);
+  function updateLangButtons() {
+    document.querySelectorAll(".lang-switch button").forEach(function (button) {
+      var active = button.getAttribute("data-lang") === state.lang;
+      button.classList.toggle("active", active);
+      button.setAttribute("aria-pressed", active ? "true" : "false");
+    });
   }
-}
 
-async function validateLicense() {
-  const license = $("validateYaml").value.trim();
-  if (!license) { alert("Paste a license first"); return; }
-  await doValidate(new URLSearchParams({license: license}));
-}
-
-async function validateId() {
-  const id = $("validateId").value.trim();
-  if (!id) { alert("Enter an id"); return; }
-  await doValidate(new URLSearchParams({id: id}));
-}
-
-async function doValidate(body) {
-  const box = $("validateResult");
-  box.classList.remove("hidden", "ok", "bad");
-  try {
-    const result = await api("/api/validate", {method: "POST", body: body});
-    box.classList.add(result.valid ? "ok" : "bad");
-    box.innerHTML = "<b>" + (result.valid ? "VALID" : "INVALID") + "</b> · " +
-      esc(result.reason) +
-      (result.licensee ? "<div class='muted' style='margin-top:6px'>" +
-        esc(result.licensee) + " · " + esc(result.edition) + " · expires " + esc(result.expires) +
-        " · " + esc((result.features || []).join(", ")) + "</div>" : "");
-  } catch (e) {
-    box.classList.add("bad");
-    box.textContent = "Validation failed: " + e.message;
+  function updateLoginServer() {
+    var url = (state.info && state.info.publicUrl) ? state.info.publicUrl : "—";
+    $("loginServer").textContent = t("login.server", { url: url });
   }
-}
 
-function clearValidate() {
-  $("validateYaml").value = "";
-  $("validateResult").classList.add("hidden");
-}
-
-async function showPublicKey() {
-  try {
-    const key = await (await fetch("/api/public-key")).text();
-    $("publicKey").textContent = key;
-    $("publicKeyBox").classList.remove("hidden");
-  } catch (e) {
-    alert("Unable to load public key");
+  function setLang(lang) {
+    var next = lang === "zh" ? "zh" : "en";
+    if (next === state.lang) { updateLangButtons(); return; }
+    state.lang = next;
+    try { localStorage.setItem("zipit.adminLang", next); } catch (e) { /* ignore */ }
+    applyStaticI18n();
+    if (state.authenticated) {
+      refreshHealth();
+      if (state.software.length) renderSoftwareOptions();
+      loadTab(state.tab);
+    }
   }
-}
 
-function copyText(text) {
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).catch(() => fallbackCopy(text));
-  } else {
-    fallbackCopy(text);
+  /* ================================================================
+   * API
+   * ================================================================ */
+  async function adminApi(path, options) {
+    var opts = options || {};
+    var method = opts.method || "GET";
+    var headers = authHeaders(opts.headers);
+    var body = null;
+    if (opts.params) {
+      var params = toParams(opts.params);
+      if (method === "GET") {
+        path += (path.indexOf("?") >= 0 ? "&" : "?") + params.toString();
+      } else {
+        headers["Content-Type"] = "application/x-www-form-urlencoded";
+        body = params.toString();
+      }
+    }
+    var response = await fetch(path, { method: method, headers: headers, body: body });
+    var text = await response.text();
+    var data;
+    try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { error: text }; }
+    if (response.status === 401) {
+      var err = new Error(data.error || "Admin token required");
+      err.unauthorized = true;
+      throw err;
+    }
+    if (!response.ok || data.ok === false) {
+      throw new Error(data.error || data.reason || ("HTTP " + response.status));
+    }
+    return data;
   }
-}
 
-function fallbackCopy(text) {
-  const area = document.createElement("textarea");
-  area.value = text;
-  document.body.appendChild(area);
-  area.select();
-  document.execCommand("copy");
-  document.body.removeChild(area);
-}
+  async function legacyApi(path, options) {
+    var opts = options || {};
+    var method = opts.method || "GET";
+    var headers = authHeaders(opts.headers);
+    var body = null;
+    if (opts.params) {
+      var params = toParams(opts.params);
+      if (method === "GET") {
+        path += (path.indexOf("?") >= 0 ? "&" : "?") + params.toString();
+      } else {
+        headers["Content-Type"] = "application/x-www-form-urlencoded";
+        body = params.toString();
+      }
+    }
+    var response = await fetch(path, { method: method, headers: headers, body: body });
+    var text = await response.text();
+    var data;
+    try { data = text ? JSON.parse(text) : {}; } catch (e) { data = { error: text }; }
+    if (response.status === 401) {
+      var err = new Error(data.error || "Admin token required");
+      err.unauthorized = true;
+      throw err;
+    }
+    if (!response.ok) {
+      throw new Error(data.error || data.reason || ("HTTP " + response.status));
+    }
+    return data;
+  }
 
-$("expires").value = defaultExpiry();
-$("adminToken").value = adminToken;
-$("adminToken").addEventListener("input", event => {
-  adminToken = event.target.value.trim();
-  localStorage.setItem("zipit.adminToken", adminToken);
-  loadAll();
-});
-loadAll();
-setInterval(loadAll, 15000);
+  function handleError(error) {
+    if (error && error.unauthorized) {
+      showLogin(t("error.adminToken"));
+      return;
+    }
+    toast(error && error.message ? error.message : t("error.unknown"), "error");
+  }
+
+  /* ================================================================
+   * boot / login
+   * ================================================================ */
+  async function loadServerInfo() {
+    try {
+      var response = await fetch("/api/server-info");
+      state.info = await response.json();
+    } catch (e) {
+      state.info = { publicUrl: location.origin, adminTokenRequired: false, auth: true };
+    }
+    $("serverUrl").textContent = state.info.publicUrl || location.origin;
+    $("serverUrl").title = state.info.publicUrl || location.origin;
+    $("loginSkipBtn").classList.toggle("hidden", !!state.info.adminTokenRequired);
+    updateLoginServer();
+  }
+
+  function showLogin(message) {
+    state.authenticated = false;
+    $("app").classList.add("hidden");
+    $("login").classList.remove("hidden");
+    if (message) {
+      $("loginError").textContent = message;
+      $("loginError").classList.remove("hidden");
+    } else {
+      $("loginError").classList.add("hidden");
+    }
+    if (state.info && state.info.adminTokenRequired) $("loginSkipBtn").classList.add("hidden");
+    setTimeout(function () { $("loginToken").focus(); }, 40);
+  }
+
+  function hideLogin() {
+    $("loginError").classList.add("hidden");
+    $("login").classList.add("hidden");
+    $("app").classList.remove("hidden");
+    state.authenticated = true;
+  }
+
+  async function enterConsole() {
+    try {
+      await loadOverview();
+      hideLogin();
+      var hash = (location.hash || "").replace("#", "");
+      var tab = ["overview", "software", "cards", "users", "license"].indexOf(hash) >= 0 ? hash : "overview";
+      setTab(tab);
+      refreshHealth();
+      toast(t("toast.connected", { url: (state.info && state.info.publicUrl) || location.origin }), "ok");
+    } catch (error) {
+      if (error && error.unauthorized) {
+        showLogin(t("error.adminToken"));
+      } else {
+        showLogin(t("error.connect", { error: error.message || error }));
+      }
+    }
+  }
+
+  function submitLogin() {
+    var value = $("loginToken").value.trim();
+    if (!value) {
+      $("loginError").textContent = t("login.errToken");
+      $("loginError").classList.remove("hidden");
+      return;
+    }
+    state.token = value;
+    localStorage.setItem("zipit.adminToken", state.token);
+    enterConsole();
+  }
+
+  function skipLogin() {
+    state.token = "";
+    localStorage.removeItem("zipit.adminToken");
+    enterConsole();
+  }
+
+  function logout() {
+    state.token = "";
+    localStorage.removeItem("zipit.adminToken");
+    $("loginToken").value = "";
+    showLogin(t("toast.loggedOut"));
+  }
+
+  /* ================================================================
+   * tabs
+   * ================================================================ */
+  var tabLoaders = {
+    overview: loadOverview,
+    software: loadSoftware,
+    cards: loadCards,
+    users: loadUsers,
+    license: loadLicenses
+  };
+
+  function setTab(name, silent) {
+    state.tab = name;
+    document.querySelectorAll(".tab").forEach(function (button) {
+      button.classList.toggle("active", button.getAttribute("data-tab") === name);
+    });
+    document.querySelectorAll(".tab-panel").forEach(function (panel) {
+      panel.classList.toggle("active", panel.id === "tab-" + name);
+    });
+    if (history.replaceState) history.replaceState(null, "", location.pathname + "#" + name);
+    else location.hash = name;
+    if (!silent) loadTab(name);
+  }
+
+  async function loadTab(name) {
+    try {
+      if (tabLoaders[name]) await tabLoaders[name]();
+      if (name !== "overview") await loadOverview();
+    } catch (error) {
+      handleError(error);
+    }
+  }
+
+  async function refreshHealth() {
+    var dot = $("healthDot");
+    var text = $("healthText");
+    try {
+      var response = await fetch("/api/health", { cache: "no-store" });
+      var data = await response.json();
+      var ok = data && data.status === "ok";
+      dot.className = "dot " + (ok ? "ok" : "bad");
+      text.textContent = ok ? t("health.running") : t("health.error");
+    } catch (e) {
+      dot.className = "dot bad";
+      text.textContent = t("health.offline");
+    }
+  }
+
+  /* ================================================================
+   * overview
+   * ================================================================ */
+  async function loadOverview() {
+    var data = await adminApi("/api/admin/overview");
+    $("statSoftware").textContent = data.software;
+    $("statUsers").textContent = data.users;
+    $("statUnused").textContent = (data.cards && data.cards.unused) || 0;
+    $("statUsed").textContent = (data.cards && data.cards.used) || 0;
+    $("statMemberships").textContent = data.memberships || 0;
+    $("statSoftwareFoot").textContent = t("stat.softwareFoot");
+    $("statUsersFoot").textContent = t("stat.usersFoot");
+    $("statUnusedFoot").textContent = t("stat.unusedFoot", {
+      revoked: (data.cards && data.cards.revoked) || 0,
+      total: (data.cards && data.cards.total) || 0
+    });
+    $("statUsedFoot").textContent = t("stat.usedFoot");
+    $("statMembershipsFoot").textContent = t("stat.membershipsFoot", {
+      active: data.activeMemberships || 0
+    });
+
+    var rows = $("overviewRecent");
+    rows.innerHTML = "";
+    var recent = data.recent || [];
+    if (!recent.length) {
+      rows.innerHTML = '<tr><td colspan="4" class="empty">' + esc(t("overview.recentEmpty")) + '</td></tr>';
+    } else {
+      recent.forEach(function (item) {
+        var tr = document.createElement("tr");
+        tr.innerHTML =
+          '<td class="cell-strong">' + esc(item.username) + '</td>' +
+          '<td>' + esc(item.softwareName || item.software) + ' <span class="cell-sub">' + esc(item.software) + '</span></td>' +
+          '<td><span class="badge">' + esc(item.group) + '</span></td>' +
+          '<td class="cell-sub">' + esc(fmtTs(item.activatedAt)) + '</td>';
+        rows.appendChild(tr);
+      });
+    }
+    await loadAudit();
+  }
+
+  async function loadAudit() {
+    try {
+      var data = await adminApi("/api/admin/audit");
+      var list = $("overviewAudit");
+      list.innerHTML = "";
+      var events = data.events || [];
+      if (!events.length) {
+        list.innerHTML = '<li class="muted">' + esc(t("overview.auditEmpty")) + '</li>';
+        return;
+      }
+      events.slice(0, 40).forEach(function (event) {
+        var li = document.createElement("li");
+        li.innerHTML =
+          '<span class="audit-ts">' + esc(fmtTs(event.ts)) + '</span>' +
+          '<span class="audit-type">' + esc(event.type) + '</span>' +
+          '<span class="audit-detail" title="' + esc(event.detail || "") + '">' + esc(
+            (event.user ? event.user + " · " : "") +
+            (event.software ? event.software + " · " : "") +
+            (event.detail || "")) + '</span>';
+        list.appendChild(li);
+      });
+    } catch (e) {
+      $("overviewAudit").innerHTML = '<li class="muted">' +
+        esc(t("overview.auditFailed", { error: e.message })) + '</li>';
+    }
+  }
+
+  /* ================================================================
+   * software
+   * ================================================================ */
+  async function loadSoftware() {
+    var data = await adminApi("/api/admin/software");
+    state.software = data.software || [];
+    renderSoftware();
+    renderSoftwareOptions();
+  }
+
+  function renderSoftware() {
+    var rows = $("softwareRows");
+    rows.innerHTML = "";
+    if (!state.software.length) {
+      rows.innerHTML = '<tr><td colspan="9" class="empty">' + esc(t("software.empty")) + '</td></tr>';
+      return;
+    }
+    state.software.forEach(function (item) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="mono-cell">' + esc(item.id) + '</td>' +
+        '<td class="cell-strong">' + esc(item.name) +
+          '<div class="cell-sub">' + esc(item.description) + '</div></td>' +
+        '<td><span class="badge">' + esc(item.group) + '</span></td>' +
+        '<td>' + (item.enabled ? statusTag("ok", t("tag.enabled")) : statusTag("bad", t("tag.disabled"))) + '</td>' +
+        '<td>' + esc(item.userCount) + '</td>' +
+        '<td>' + esc(item.cardCount) + '</td>' +
+        '<td>' + esc(item.unusedCards) + '</td>' +
+        '<td class="cell-sub">' + esc(fmtTs(item.createdAt)) + '</td>' +
+        '<td><div class="actions">' +
+          '<button class="btn sm" data-toggle-software="' + esc(item.id) + '">' +
+            esc(item.enabled ? t("btn.disable") : t("btn.enable")) + '</button>' +
+          '<button class="btn sm" data-gen-cards="' + esc(item.id) + '">' +
+            esc(t("btn.generateCards")) + '</button>' +
+        '</div></td>';
+      rows.appendChild(tr);
+    });
+    rows.querySelectorAll("[data-toggle-software]").forEach(function (button) {
+      button.addEventListener("click", function () { toggleSoftware(button.getAttribute("data-toggle-software")); });
+    });
+    rows.querySelectorAll("[data-gen-cards]").forEach(function (button) {
+      button.addEventListener("click", function () { goGenerateCards(button.getAttribute("data-gen-cards")); });
+    });
+  }
+
+  function renderSoftwareOptions() {
+    var allLabel = t("common.allSoftware");
+    var html = '<option value="">' + esc(allLabel) + '</option>';
+    state.software.forEach(function (item) {
+      html += '<option value="' + esc(item.id) + '">' + esc(item.name) + " (" + esc(item.id) + ')</option>';
+    });
+    ["filterCardSoftware", "filterUserSoftware"].forEach(function (id) {
+      var select = $(id);
+      var current = select.value;
+      select.innerHTML = html;
+      if (current) select.value = current;
+    });
+    var cardSelect = $("cardSoftware");
+    var previous = cardSelect.value;
+    cardSelect.innerHTML = "";
+    state.software.forEach(function (item) {
+      var option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = item.name + " (" + item.id + ")";
+      cardSelect.appendChild(option);
+    });
+    if (previous) cardSelect.value = previous;
+  }
+
+  async function createSoftware() {
+    var id = $("swId").value.trim();
+    var name = $("swName").value.trim();
+    if (!id || !name) { toast(t("software.createdToast", { id: "?" }), "warn"); return; }
+    try {
+      await adminApi("/api/admin/software", {
+        method: "POST",
+        params: { id: id, name: name, group: $("swGroup").value.trim(), description: $("swDesc").value.trim() }
+      });
+      $("softwareForm").reset();
+      toast(t("software.createdToast", { id: id }), "ok");
+      await loadSoftware();
+      await loadOverview();
+    } catch (error) { handleError(error); }
+  }
+
+  async function toggleSoftware(id) {
+    try {
+      var data = await adminApi("/api/admin/software/" + encodeURIComponent(id) + "/toggle", { method: "POST" });
+      toast(t("software.toggledToast", {
+        id: id,
+        state: data.software.enabled ? t("state.enabled") : t("state.disabled")
+      }), "ok");
+      await loadSoftware();
+    } catch (error) { handleError(error); }
+  }
+
+  function goGenerateCards(softwareId) {
+    setTab("cards", true);
+    $("cardSoftware").value = softwareId;
+    $("cardCount").focus();
+  }
+
+  /* ================================================================
+   * cards
+   * ================================================================ */
+  async function loadCards() {
+    if (!state.software.length) await loadSoftware();
+    var data = await adminApi("/api/admin/cards", {
+      params: { software: $("filterCardSoftware").value, status: $("filterCardStatus").value }
+    });
+    state.cards = data.cards || [];
+    renderCards();
+  }
+
+  function renderCards() {
+    var rows = $("cardRows");
+    rows.innerHTML = "";
+    if (!state.cards.length) {
+      rows.innerHTML = '<tr><td colspan="9" class="empty">' + esc(t("cards.empty")) + '</td></tr>';
+      return;
+    }
+    state.cards.slice(0, 500).forEach(function (card) {
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="mono-cell">' + esc(card.code) + '</td>' +
+        '<td>' + esc(card.software) + '</td>' +
+        '<td>' + esc(fmtDays(card.durationDays)) + '</td>' +
+        '<td class="cell-sub">' + esc(card.note || "") + '</td>' +
+        '<td>' + cardStatusTag(card.status) + '</td>' +
+        '<td>' + esc(card.usedByUsername || "—") + '</td>' +
+        '<td class="cell-sub">' + esc(card.usedAt ? fmtTs(card.usedAt) : "—") + '</td>' +
+        '<td class="mono-cell cell-sub">' + esc(card.batchId || "") + '</td>' +
+        '<td><div class="actions">' +
+          '<button class="btn sm" data-copy-code="' + esc(card.code) + '">' + esc(t("btn.copy")) + '</button>' +
+          (card.status === "unused"
+            ? '<button class="btn sm danger" data-revoke-card="' + esc(card.code) + '">' + esc(t("btn.revoke")) + '</button>'
+            : "") +
+        '</div></td>';
+      rows.appendChild(tr);
+    });
+    rows.querySelectorAll("[data-copy-code]").forEach(function (button) {
+      button.addEventListener("click", function () { copyText(button.getAttribute("data-copy-code")); });
+    });
+    rows.querySelectorAll("[data-revoke-card]").forEach(function (button) {
+      button.addEventListener("click", function () { revokeCard(button.getAttribute("data-revoke-card")); });
+    });
+  }
+
+  async function generateCards() {
+    var software = $("cardSoftware").value;
+    if (!software) { toast(t("cards.needSoftware"), "warn"); return; }
+    try {
+      var data = await adminApi("/api/admin/cards", {
+        method: "POST",
+        params: {
+          software: software,
+          count: $("cardCount").value,
+          durationDays: $("cardDays").value,
+          note: $("cardNote").value.trim()
+        }
+      });
+      state.lastCodes = data.cards || [];
+      state.lastBatch = data.batchId || "";
+      renderGeneratedCodes(data);
+      toast(t("cards.generatedToast", { n: state.lastCodes.length }), "ok");
+      await loadCards();
+      await loadOverview();
+    } catch (error) { handleError(error); }
+  }
+
+  function renderGeneratedCodes(data) {
+    var codes = data.cards || [];
+    $("cardsResult").classList.remove("hidden");
+    $("cardsResultTitle").textContent = t("cards.generatedTitle", { n: codes.length });
+    $("cardsResultMeta").textContent = t("cards.generatedMeta", {
+      batch: data.batchId || "",
+      software: data.software || ""
+    });
+    var grid = $("codesGrid");
+    grid.innerHTML = "";
+    codes.forEach(function (code) {
+      var el = document.createElement("div");
+      el.className = "code-item";
+      el.innerHTML = '<span>' + esc(code) + '</span><button type="button">' + esc(t("common.copy")) + '</button>';
+      el.querySelector("button").addEventListener("click", function () { copyText(code); });
+      grid.appendChild(el);
+    });
+  }
+
+  async function revokeCard(code) {
+    if (!confirm(t("cards.revokeConfirm", { code: code }))) return;
+    try {
+      await adminApi("/api/admin/cards/" + encodeURIComponent(code) + "/revoke", { method: "POST" });
+      toast(t("cards.revokedToast", { code: code }), "ok");
+      await loadCards();
+      await loadOverview();
+    } catch (error) { handleError(error); }
+  }
+
+  function exportCodes(kind) {
+    if (!state.lastCodes.length) { toast(t("cards.noCodesExport"), "warn"); return; }
+    if (kind === "csv") {
+      var lines = ["code,software,batchId"];
+      state.lastCodes.forEach(function (code) {
+        lines.push(code + "," + $("cardSoftware").value + "," + state.lastBatch);
+      });
+      downloadText("zipit-cards-" + state.lastBatch + ".csv", lines.join("\r\n"), "text/csv");
+    } else {
+      downloadText("zipit-cards-" + state.lastBatch + ".txt", state.lastCodes.join("\r\n"), "text/plain");
+    }
+  }
+
+  function exportCardsCsv() {
+    if (!state.cards.length) { toast(t("cards.listEmptyToast"), "warn"); return; }
+    var lines = ["code,software,durationDays,note,status,usedByUsername,usedAt,batchId,createdAt"];
+    state.cards.forEach(function (card) {
+      lines.push([card.code, card.software, card.durationDays,
+        '"' + String(card.note || "").replace(/"/g, '""') + '"', card.status,
+        card.usedByUsername || "", card.usedAt || "", card.batchId || "", card.createdAt].join(","));
+    });
+    downloadText("zipit-cards-export.csv", lines.join("\r\n"), "text/csv");
+  }
+
+  /* ================================================================
+   * users
+   * ================================================================ */
+  async function loadUsers() {
+    if (!state.software.length) await loadSoftware();
+    var data = await adminApi("/api/admin/users", {
+      params: { q: $("filterUserQ").value.trim(), software: $("filterUserSoftware").value }
+    });
+    state.users = data.users || [];
+    renderUsers();
+  }
+
+  function renderUsers() {
+    var rows = $("userRows");
+    rows.innerHTML = "";
+    if (!state.users.length) {
+      rows.innerHTML = '<tr><td colspan="6" class="empty">' + esc(t("users.empty")) + '</td></tr>';
+      return;
+    }
+    state.users.slice(0, 500).forEach(function (user) {
+      var statusHtml = user.disabled
+        ? statusTag("bad", t("userStatus.disabled")) : statusTag("ok", t("userStatus.normal"));
+      var hwid = user.hwid || "";
+      var hwidCell;
+      if (hwid) {
+        hwidCell = '<div class="mono-cell cell-sub" title="' + esc(hwid) + '">' +
+          esc(hwid.length > 20 ? hwid.slice(0, 20) + "…" : hwid) + '</div>' +
+          statusTag("ok", t("tag.bound"));
+      } else {
+        hwidCell = statusTag("muted", t("tag.unbound"));
+      }
+      var chips = "";
+      (user.membershipDetails || []).forEach(function (membership) {
+        chips += '<span class="chip" title="' + esc(t("table.software")) + ': ' + esc(membership.software) +
+          ' · ' + esc(t("table.group")) + ': ' + esc(membership.group) +
+          ' · ' + esc(t("table.expires")) + ': ' + esc(fmtExpires(membership.expiresAt)) + '">' +
+          memberStatusTag(membership.status) +
+          esc(membership.software) + ':<span class="muted">' + esc(membership.group) + '</span>' +
+          (membership.status === "active"
+            ? '<button class="x" data-revoke-membership="' + esc(user.id) + '|' + esc(membership.software) +
+              '" title="' + esc(t("btn.revoke")) + '">×</button>' : "") +
+          '</span>';
+      });
+      if (!chips) chips = '<span class="muted">' + esc(t("users.noAuth")) + '</span>';
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td><span class="cell-strong">' + esc(user.username) + '</span>' +
+          '<div class="cell-sub mono">' + esc(user.id) + '</div></td>' +
+        '<td>' + statusHtml + '</td>' +
+        '<td>' + hwidCell + '</td>' +
+        '<td><div class="chips">' + chips + '</div></td>' +
+        '<td class="cell-sub">' + esc(fmtTs(user.createdAt)) + '</td>' +
+        '<td><div class="actions">' +
+          '<button class="btn sm" data-toggle-user="' + esc(user.id) + '">' +
+            esc(user.disabled ? t("btn.enable") : t("btn.disable")) + '</button>' +
+          '<button class="btn sm" data-set-hwid="' + esc(user.id) + '">' + esc(t("btn.setHwid")) + '</button>' +
+          (hwid
+            ? '<button class="btn sm danger" data-reset-hwid="' + esc(user.id) + '">' + esc(t("btn.resetHwid")) + '</button>'
+            : "") +
+        '</div></td>';
+      rows.appendChild(tr);
+    });
+    rows.querySelectorAll("[data-toggle-user]").forEach(function (button) {
+      button.addEventListener("click", function () { toggleUser(button.getAttribute("data-toggle-user")); });
+    });
+    rows.querySelectorAll("[data-set-hwid]").forEach(function (button) {
+      button.addEventListener("click", function () { setUserHwid(button.getAttribute("data-set-hwid")); });
+    });
+    rows.querySelectorAll("[data-reset-hwid]").forEach(function (button) {
+      button.addEventListener("click", function () { resetUserHwid(button.getAttribute("data-reset-hwid")); });
+    });
+    rows.querySelectorAll("[data-revoke-membership]").forEach(function (button) {
+      button.addEventListener("click", function () {
+        var parts = button.getAttribute("data-revoke-membership").split("|");
+        revokeMembership(parts[0], parts[1]);
+      });
+    });
+  }
+
+  async function toggleUser(userId) {
+    try {
+      var data = await adminApi("/api/admin/users/" + encodeURIComponent(userId) + "/toggle", { method: "POST" });
+      toast(t("users.toggleToast", {
+        name: data.user.username,
+        state: data.user.disabled ? t("state.disabled") : t("state.enabled")
+      }), "ok");
+      await loadUsers();
+    } catch (error) { handleError(error); }
+  }
+
+  async function resetUserHwid(userId) {
+    if (!confirm(t("users.resetConfirm"))) return;
+    try {
+      var data = await adminApi("/api/admin/users/" + encodeURIComponent(userId) + "/hwid/reset", { method: "POST" });
+      toast(t("users.resetToast", { name: data.username }), "ok");
+      await loadUsers();
+      await loadOverview();
+    } catch (error) { handleError(error); }
+  }
+
+  async function setUserHwid(userId) {
+    var value = prompt(t("users.setPrompt"), "");
+    if (value === null) return;
+    value = value.trim();
+    if (!value) { toast(t("users.setEmptyWarn"), "warn"); return; }
+    try {
+      var data = await adminApi("/api/admin/users/" + encodeURIComponent(userId) + "/hwid", {
+        method: "POST", params: { hwid: value }
+      });
+      toast(t("users.setToast", { name: data.username }), "ok");
+      await loadUsers();
+    } catch (error) { handleError(error); }
+  }
+
+  async function revokeMembership(userId, softwareId) {
+    if (!confirm(t("users.revokeConfirm"))) return;
+    try {
+      await adminApi("/api/admin/users/" + encodeURIComponent(userId)
+        + "/memberships/" + encodeURIComponent(softwareId) + "/revoke", { method: "POST" });
+      toast(t("users.revokeToast", { software: softwareId }), "ok");
+      await loadUsers();
+      await loadOverview();
+    } catch (error) { handleError(error); }
+  }
+
+  /* ================================================================
+   * legacy enterprise licenses
+   * ================================================================ */
+  function defaultExpiry() {
+    var d = new Date(Date.now() + 365 * 86400000);
+    return d.toISOString().slice(0, 10);
+  }
+
+  async function loadLicenses() {
+    await loadSoftware();
+    try {
+      var list = await legacyApi("/api/licenses");
+      renderLicenses(list || []);
+    } catch (error) {
+      if (error && error.unauthorized) { showLogin(t("error.adminToken")); return; }
+      $("licenseRows").innerHTML = '<tr><td colspan="8" class="empty">' +
+        esc(t("license.listLoadFailed", { error: error.message })) + '</td></tr>';
+    }
+  }
+
+  function licenseStatus(record) {
+    if (record.revoked) return "revoked";
+    var expires = new Date(record.expires + "T23:59:59");
+    if (!isNaN(expires.getTime()) && expires < new Date()) return "expired";
+    return "active";
+  }
+
+  function renderLicenses(list) {
+    var rows = $("licenseRows");
+    rows.innerHTML = "";
+    $("licenseTableEmpty").textContent = list.length ? "" : t("license.listEmpty");
+    if (!list.length) {
+      rows.innerHTML = '<tr><td colspan="8" class="empty">' + esc(t("license.listEmpty")) + '</td></tr>';
+      return;
+    }
+    list.forEach(function (record) {
+      var status = licenseStatus(record);
+      var tr = document.createElement("tr");
+      tr.innerHTML =
+        '<td class="mono-cell">' + esc(record.id) + '</td>' +
+        '<td class="cell-strong">' + esc(record.licensee) + '</td>' +
+        '<td>' + esc(record.edition) + '</td>' +
+        '<td>' + esc(record.expires) + '</td>' +
+        '<td class="cell-sub">' + esc((record.features || []).join(", ")) + '</td>' +
+        '<td>' + licenseStatusTag(status) + '</td>' +
+        '<td class="cell-sub">' + esc(fmtTs(record.createdAt)) + '</td>' +
+        '<td><div class="actions">' +
+          '<button class="btn sm" data-copy-license="' + esc(record.id) + '">' + esc(t("btn.copy")) + '</button>' +
+          '<button class="btn sm" data-download-license="' + esc(record.id) + '">' + esc(t("btn.download")) + '</button>' +
+          (status === "revoked" ? "" :
+            '<button class="btn sm" data-renew-license="' + esc(record.id) + '">' + esc(t("btn.renew")) + '</button>' +
+            '<button class="btn sm danger" data-revoke-license="' + esc(record.id) + '">' + esc(t("btn.revoke")) + '</button>') +
+        '</div></td>';
+      rows.appendChild(tr);
+    });
+    rows.querySelectorAll("[data-copy-license]").forEach(function (button) {
+      button.addEventListener("click", function () { copyLicense(button.getAttribute("data-copy-license")); });
+    });
+    rows.querySelectorAll("[data-download-license]").forEach(function (button) {
+      button.addEventListener("click", function () { downloadLicense(button.getAttribute("data-download-license")); });
+    });
+    rows.querySelectorAll("[data-renew-license]").forEach(function (button) {
+      button.addEventListener("click", function () { renewLicense(button.getAttribute("data-renew-license")); });
+    });
+    rows.querySelectorAll("[data-revoke-license]").forEach(function (button) {
+      button.addEventListener("click", function () { revokeLicense(button.getAttribute("data-revoke-license")); });
+    });
+  }
+
+  async function issueLicense() {
+    var licensee = $("licLicensee").value.trim();
+    if (!licensee) { toast(t("license.licenseeRequired"), "warn"); return; }
+    try {
+      var created = await legacyApi("/api/licenses", {
+        method: "POST",
+        params: {
+          licensee: licensee,
+          edition: $("licEdition").value,
+          expires: $("licExpires").value || defaultExpiry(),
+          features: $("licFeatures").value.trim()
+        }
+      });
+      state.lastCreatedLicense = created.license || "";
+      $("licenseResult").classList.remove("hidden");
+      $("licenseResultTitle").textContent = t("license.issuedTitle", { id: created.id });
+      $("licenseYaml").textContent = created.license || "";
+      toast(t("license.issuedToast", { id: created.id }), "ok");
+      await loadLicenses();
+    } catch (error) { handleError(error); }
+  }
+
+  async function validateLicenseYaml() {
+    var license = $("validateYaml").value.trim();
+    if (!license) { toast(t("license.pasteFirst"), "warn"); return; }
+    await doValidate({ license: license });
+  }
+
+  async function validateLicenseId() {
+    var id = $("validateId").value.trim();
+    if (!id) { toast(t("license.enterId"), "warn"); return; }
+    await doValidate({ id: id });
+  }
+
+  async function doValidate(params) {
+    var box = $("validateResult");
+    box.classList.remove("hidden", "ok", "bad");
+    try {
+      var result = await legacyApi("/api/validate", { method: "POST", params: params });
+      box.classList.add(result.valid ? "ok" : "bad");
+      var html = "<b>" + (result.valid ? t("license.valid") : t("license.invalid")) + "</b> · " +
+        esc(result.reason || "");
+      if (result.licensee) {
+        html += '<div class="muted" style="margin-top:5px">' + esc(result.licensee) + " · " +
+          esc(result.edition) + " · " + esc(t("table.expires")) + ": " + esc(result.expires) +
+          " · " + esc((result.features || []).join(", ")) + "</div>";
+      }
+      box.innerHTML = html;
+    } catch (error) {
+      box.classList.add("bad");
+      box.textContent = t("license.validateFailed", { error: error.message || error });
+    }
+  }
+
+  async function renewLicense(id) {
+    var expires = prompt(t("license.renewPrompt"), defaultExpiry());
+    if (!expires) return;
+    try {
+      var created = await legacyApi("/api/licenses/" + encodeURIComponent(id) + "/renew",
+        { method: "POST", params: { expires: expires } });
+      state.lastCreatedLicense = created.license || "";
+      $("licenseResult").classList.remove("hidden");
+      $("licenseResultTitle").textContent = t("license.renewedTitle", { id: created.id });
+      $("licenseYaml").textContent = created.license || "";
+      toast(t("license.renewedToast", { id: id }), "ok");
+      await loadLicenses();
+    } catch (error) { handleError(error); }
+  }
+
+  async function revokeLicense(id) {
+    if (!confirm(t("license.revokeConfirm", { id: id }))) return;
+    try {
+      await legacyApi("/api/licenses/" + encodeURIComponent(id) + "/revoke", { method: "POST" });
+      toast(t("license.revokedToast", { id: id }), "ok");
+      await loadLicenses();
+    } catch (error) { handleError(error); }
+  }
+
+  async function downloadLicense(id) {
+    try {
+      var response = await fetch("/api/licenses/" + encodeURIComponent(id) + "/download",
+        { headers: authHeaders() });
+      if (response.status === 401) { showLogin(t("error.adminToken")); return; }
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      downloadText(id + ".yml", await response.text(), "application/x-yaml");
+      toast(t("license.downloaded", { id: id }), "ok");
+    } catch (error) {
+      toast(t("license.downloadFailed", { error: error.message }), "error");
+    }
+  }
+
+  async function copyLicense(id) {
+    try {
+      var response = await fetch("/api/licenses/" + encodeURIComponent(id) + "/download",
+        { headers: authHeaders() });
+      if (response.status === 401) { showLogin(t("error.adminToken")); return; }
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      copyText(await response.text());
+    } catch (error) { handleError(error); }
+  }
+
+  async function showPublicKey() {
+    try {
+      var response = await fetch("/api/public-key", { headers: authHeaders() });
+      if (!response.ok) throw new Error("HTTP " + response.status);
+      $("publicKeyBox").textContent = await response.text();
+      $("publicKeyBox").classList.remove("hidden");
+    } catch (error) { handleError(error); }
+  }
+
+  /* ================================================================
+   * wiring
+   * ================================================================ */
+  async function boot() {
+    // Automation / deep-link parameters: ?token=...&lang=zh|en (stored, then stripped).
+    try {
+      var params = new URLSearchParams(location.search || "");
+      var urlToken = params.get("token");
+      var urlLang = params.get("lang");
+      if (urlLang === "zh" || urlLang === "en") {
+        state.lang = urlLang;
+        try { localStorage.setItem("zipit.adminLang", urlLang); } catch (e) { /* ignore */ }
+      }
+      if (urlToken) {
+        state.token = urlToken;
+        localStorage.setItem("zipit.adminToken", state.token);
+      }
+      if (urlToken || urlLang) {
+        if (history.replaceState) history.replaceState(null, "", location.pathname + (location.hash || ""));
+      }
+    } catch (ignored) { /* old browser */ }
+
+    applyStaticI18n();
+    $("licExpires").value = defaultExpiry();
+    $("loginToken").value = state.token;
+
+    document.querySelectorAll(".tab").forEach(function (button) {
+      button.addEventListener("click", function () { setTab(button.getAttribute("data-tab")); });
+    });
+    document.querySelectorAll(".lang-switch button").forEach(function (button) {
+      button.addEventListener("click", function () { setLang(button.getAttribute("data-lang")); });
+    });
+    $("loginBtn").addEventListener("click", submitLogin);
+    $("loginToken").addEventListener("keydown", function (event) {
+      if (event.key === "Enter") submitLogin();
+    });
+    $("loginSkipBtn").addEventListener("click", skipLogin);
+    $("logoutBtn").addEventListener("click", logout);
+    $("refreshBtn").addEventListener("click", function () {
+      loadTab(state.tab);
+      toast(t("toast.refreshed"), "ok");
+    });
+
+    $("createSoftwareBtn").addEventListener("click", createSoftware);
+    $("generateCardsBtn").addEventListener("click", generateCards);
+    $("copyCodesBtn").addEventListener("click", function () { copyText(state.lastCodes.join("\r\n")); });
+    $("exportTxtBtn").addEventListener("click", function () { exportCodes("txt"); });
+    $("exportCsvBtn").addEventListener("click", function () { exportCodes("csv"); });
+    $("exportCardsBtn").addEventListener("click", exportCardsCsv);
+    $("reloadCardsBtn").addEventListener("click", function () { loadCards().then(loadOverview).catch(handleError); });
+    $("filterCardSoftware").addEventListener("change", function () { loadCards().catch(handleError); });
+    $("filterCardStatus").addEventListener("change", function () { loadCards().catch(handleError); });
+    $("reloadUsersBtn").addEventListener("click", function () { loadUsers().catch(handleError); });
+    $("filterUserSoftware").addEventListener("change", function () { loadUsers().catch(handleError); });
+    var userSearchTimer = null;
+    $("filterUserQ").addEventListener("input", function () {
+      clearTimeout(userSearchTimer);
+      userSearchTimer = setTimeout(function () { loadUsers().catch(handleError); }, 350);
+    });
+
+    $("issueLicenseBtn").addEventListener("click", issueLicense);
+    $("validateLicenseBtn").addEventListener("click", validateLicenseYaml);
+    $("validateIdBtn").addEventListener("click", validateLicenseId);
+    $("publicKeyBtn").addEventListener("click", showPublicKey);
+    $("reloadLicensesBtn").addEventListener("click", function () { loadLicenses().catch(handleError); });
+    $("copyLicenseYamlBtn").addEventListener("click", function () { copyText(state.lastCreatedLicense); });
+    $("downloadLicenseYamlBtn").addEventListener("click", function () {
+      if (state.lastCreatedLicense) {
+        downloadText("zipit-license.yml", state.lastCreatedLicense, "application/x-yaml");
+      } else { toast(t("license.pasteFirst"), "warn"); }
+    });
+    $("copyClientYamlBtn").addEventListener("click", function () { copyText($("clientLicenseYaml").textContent); });
+    $("copyClientAuthBtn").addEventListener("click", function () { copyText($("clientAuthYaml").textContent); });
+
+    await loadServerInfo();
+    applyStaticI18n();
+    if (state.token) {
+      await enterConsole();
+    } else if (state.info && state.info.adminTokenRequired) {
+      showLogin("");
+    } else {
+      await enterConsole();
+    }
+    setInterval(refreshHealth, 20000);
+  }
+
+  boot();
+})();
 </script>
 </body>
 </html>

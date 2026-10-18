@@ -76,7 +76,8 @@ public final class FieldInitializationPass implements Pass {
         MethodNode clinit = new MethodNode(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
         clinit.instructions.add(new InsnNode(Opcodes.RETURN));
         clinit.maxLocals = 0;
-        clinit.maxStack = 0;
+        // Moved constants can be long/double values (2 stack slots).
+        clinit.maxStack = 2;
         node.methods.add(clinit);
         return clinit.instructions;
     }

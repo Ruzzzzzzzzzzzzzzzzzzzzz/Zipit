@@ -20,6 +20,9 @@ Main capabilities:
 - Audit reports, stable mappings, incremental builds, watermark tracing and
   JVM verification
 - RSA-SHA256 licenses and a self-hosted license server
+- **Server-side multi-software authorization**: users, per-software card keys,
+  automatic authorization groups, strict per-software permission isolation and
+  an injected login/register/activate gate for protected applications
 
 ## Requirements
 
@@ -235,16 +238,106 @@ command snippets. `GET /api/server-info` returns the configured public URL.
 Clients verify the RSA signature locally and use the server for revocation and
 online validation.
 
+## Multi-software authorization (Auth Gate)
+
+The license server is also a multi-software authorization backend: one server
+manages several products, each with its own card keys, user group and users.
+Every protected application can embed a login/register/card-activation gate.
+
+Start the authorization server:
+
+```bash
+java -jar dist/zipit-license-server-1.0.0-all.jar \
+  --host 0.0.0.0 --port 8090 \
+  --data ./auth-data \
+  --admin-token s3cret \
+  --public-url https://auth.example.com
+```
+
+Open `http://<host>:<port>/` for the admin console and sign in with the admin
+token. The console has five sections: **Overview**, **Software**, **Cards**,
+**Users** and the legacy **Enterprise License** tools. Typical flow:
+
+1. Create a software entry, for example id `my-app` with group `grp-my-app`.
+2. Generate one or more cards for that software (optional expiry in days) and
+   export them as TXT/CSV.
+3. Users register in the gate window, enter a card and automatically join the
+   software's authorization group.
+
+Permissions are isolated per software: an authorization group (and its token)
+only unlocks its own software. Activating software A never grants access to
+software B, and a token issued for A is rejected by B's session check.
+
+Each account is additionally bound to one machine HWID: the first successful
+login/activation records the client's hardware fingerprint, and later requests
+from a different machine are rejected (`HWID_MISMATCH`) even with valid
+credentials. Admins can inspect the bound HWID and reset or re-bind it from the
+Users tab when a user changes hardware.
+
+### Protect an application with the gate
+
+```yaml
+authGate:
+  enabled: true
+  server: "https://auth.example.com"
+  software: "my-app"          # id registered in the admin console
+  title: "My App 授权验证"
+  register: true
+  cacheFile: ""               # default ~/.zipit-auth/<software>.token
+  timeoutMs: 5000
+  entryPoints: []             # extra "owner#method" hooks, main() is always gated
+```
+
+```bash
+java -jar dist/zipit-1.0.0-all.jar -i app.jar -o app-protected.jar \
+  --auth-gate --auth-server https://auth.example.com \
+  --auth-software my-app --auth-title "My App 授权验证" --verify
+```
+
+When the protected application starts (or a configured entry point is called) a
+modal window asks for username/password, offers registration and card
+activation. Nothing runs until the server confirms an active authorization for
+that software. Tokens are cached and revalidated online on every launch; there
+is no offline bypass. The gate uses plain HTTP(S) through `HttpURLConnection`
+and adds no dependencies to the protected application.
+
+The gate window is English-only and deliberately shows no deployment details:
+it does not display the server URL or the authorized software id, and the window
+title is the configured title (use a generic value such as `Authorization`).
+The server URL and software id are still embedded at build time and enforced
+server-side; only the dialog labels are hidden. The Zipit GUI and the admin
+console keep their independent `中文 / English` switches.
+
 ## GUI
 
 ```bash
 java -jar dist/zipit-gui-1.0.0-all.jar
 ```
 
-The GUI edits the same configuration schema as the CLI. The Transforms page
-includes method virtualization and anti-LLM controls; the Enterprise page
-accepts license files, public keys and the license server URL. **File > Save
-configuration** produces a YAML file that can be replayed in CI with `-c`.
+**Language**: the GUI ships with complete English and Chinese translations.
+The top-bar globe switch (`中文 / EN`) applies immediately and is remembered
+across restarts (`-Dzipit.gui.lang=zh|en` overrides for one run). Engine pass
+log lines in the console stay in English.
+
+**Style**: a restrained classic look (parchment and ink themes, antique-bronze
+accents, serif display titles, 1px hairlines) with a subtle animated dark/light
+transition.
+
+The GUI edits the same configuration schema as the CLI: Transforms covers
+renaming, encryption, flow, virtualization, anti-LLM and reference hiding; the
+Enterprise page holds license fields, release tools and the **Software
+authorization (Auth Gate)** card with an inline connection test and a link to
+the admin console. **File > Save configuration** produces a YAML file that can
+be replayed in CI with `-c`.
+
+## Documentation
+
+- [docs/AUTH.md](docs/AUTH.md) — multi-software authorization server, card keys,
+  groups/permissions, HWID binding, admin API and client Auth Gate contract.
+- [docs/UI.md](docs/UI.md) — restrained-classic visual language, Chinese/English
+  switching for the GUI and admin console, Auth Gate dialog rules.
+- [docs/VERIFICATION.md](docs/VERIFICATION.md) — reproduction commands, test
+  matrices, bytecode/verification evidence and residual risks.
 
 ## Integration tests
 

@@ -139,7 +139,10 @@ public final class Main {
     private static ZipitConfig buildConfig(Args args, Log log) throws Exception {
         ZipitConfig base;
         if (args.config != null) {
-            base = ConfigLoader.load(Paths.get(args.config));
+            // Lenient load: -i/-o (and other flags) are applied as overrides below,
+            // so a config file without input/output must not fail here. The final
+            // strict build() at the end still reports missing paths clearly.
+            base = ConfigLoader.load(Paths.get(args.config), false);
         } else {
             ZipitConfig.Builder builder = new ZipitConfig.Builder();
             if (args.input == null || args.output == null) {
@@ -302,6 +305,24 @@ public final class Main {
         if (args.antiDebug) {
             b.antiDebug(true);
         }
+        ZipitConfig.AuthGateOptions gate = base.authGate();
+        boolean gateTouched = args.authGate || args.authServer != null || args.authSoftware != null
+                || args.authTitle != null || args.authNoRegister || args.authCache != null
+                || args.authTimeout != null || !args.authEntries.isEmpty();
+        if (gateTouched) {
+            List<String> gateEntries = new ArrayList<String>(gate.entryPoints());
+            gateEntries.addAll(args.authEntries);
+            gate = new ZipitConfig.AuthGateOptions(
+                    true,
+                    args.authServer == null ? gate.server() : args.authServer,
+                    args.authSoftware == null ? gate.software() : args.authSoftware,
+                    args.authTitle == null ? gate.title() : args.authTitle,
+                    args.authNoRegister ? false : gate.allowRegister(),
+                    args.authCache == null ? gate.cacheFile() : args.authCache,
+                    args.authTimeout == null ? gate.timeoutMs() : args.authTimeout.intValue(),
+                    gateEntries);
+            b.authGate(gate);
+        }
         ZipitConfig.LicenseOptions license = base.license();
         String server = args.licenseServer == null ? license.server() : args.licenseServer;
         if (server.trim().isEmpty()) {
@@ -333,6 +354,10 @@ public final class Main {
         ZipitConfig result = b.build();
         if (args.preset != null) {
             result = Presets.apply(result, args.preset);
+        }
+        if (result.authGate().enabled()
+                && (result.authGate().server().isEmpty() || result.authGate().software().isEmpty())) {
+            throw new ConfigException("authGate.server and authGate.software are required when the auth gate is enabled");
         }
         if (args.verbose) {
             log.debug("Effective configuration: input=%s output=%s seed=%d preset=%s",
@@ -375,6 +400,14 @@ public final class Main {
         System.out.println("  --incremental <prev.jar> reuse unchanged classes from a previous output");
         System.out.println("  --incremental-metadata <file> incremental metadata path");
         System.out.println("  --anti-debug           add a startup debug-agent guard");
+        System.out.println("  --auth-gate            inject the server-backed authorization gate");
+        System.out.println("  --auth-server <url>    authorization server base URL (e.g. http://127.0.0.1:8090)");
+        System.out.println("  --auth-software <id>   software id registered on the authorization server");
+        System.out.println("  --auth-title <t>       authorization window title");
+        System.out.println("  --auth-no-register     hide account registration in the gate window");
+        System.out.println("  --auth-cache <file>    token cache file (default ~/.zipit-auth/<software>.token)");
+        System.out.println("  --auth-timeout <ms>    HTTP connect/read timeout for the gate (default 5000)");
+        System.out.println("  --auth-entry <class#method>  extra verification entry point (repeatable/comma-separated)");
         System.out.println("  --dictionary <chars>   identifier character dictionary");
         System.out.println("  --min-name-length <n>  minimum generated name length");
         System.out.println("  --input-mapping <file> reuse a previous mapping for stable builds");
@@ -429,6 +462,14 @@ public final class Main {
         boolean antiLlm;
         Integer antiLlmDecoys;
         Integer antiLlmLayers;
+        boolean authGate;
+        String authServer;
+        String authSoftware;
+        String authTitle;
+        boolean authNoRegister;
+        String authCache;
+        Integer authTimeout;
+        final List<String> authEntries = new ArrayList<String>();
         String incrementalPrevious;
         String incrementalMetadata;
         boolean antiDebug;
@@ -516,6 +557,33 @@ public final class Main {
                     a.antiLlmDecoys = Integer.valueOf(value(argv, ++i, arg));
                 } else if ("--anti-llm-layers".equals(arg)) {
                     a.antiLlmLayers = Integer.valueOf(value(argv, ++i, arg));
+                } else if ("--auth-gate".equals(arg)) {
+                    a.authGate = true;
+                } else if ("--auth-server".equals(arg)) {
+                    a.authServer = value(argv, ++i, arg);
+                    a.authGate = true;
+                } else if ("--auth-software".equals(arg)) {
+                    a.authSoftware = value(argv, ++i, arg);
+                    a.authGate = true;
+                } else if ("--auth-title".equals(arg)) {
+                    a.authTitle = value(argv, ++i, arg);
+                    a.authGate = true;
+                } else if ("--auth-no-register".equals(arg)) {
+                    a.authNoRegister = true;
+                    a.authGate = true;
+                } else if ("--auth-cache".equals(arg)) {
+                    a.authCache = value(argv, ++i, arg);
+                    a.authGate = true;
+                } else if ("--auth-timeout".equals(arg)) {
+                    a.authTimeout = Integer.valueOf(value(argv, ++i, arg));
+                    a.authGate = true;
+                } else if ("--auth-entry".equals(arg)) {
+                    for (String part : value(argv, ++i, arg).split(",")) {
+                        if (!part.trim().isEmpty()) {
+                            a.authEntries.add(part.trim());
+                        }
+                    }
+                    a.authGate = true;
                 } else if ("--incremental".equals(arg)) {
                     a.incrementalPrevious = value(argv, ++i, arg);
                 } else if ("--incremental-metadata".equals(arg)) {

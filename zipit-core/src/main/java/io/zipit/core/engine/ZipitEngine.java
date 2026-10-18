@@ -14,6 +14,7 @@ import io.zipit.core.enterprise.RiskReport;
 import io.zipit.core.model.ClassPool;
 import io.zipit.core.model.Hierarchy;
 import io.zipit.core.pass.impl.AntiLlmPass;
+import io.zipit.core.pass.impl.AuthGatePass;
 import io.zipit.core.pass.impl.ControlFlowFlatteningPass;
 import io.zipit.core.pass.impl.AntiDebugPass;
 import io.zipit.core.pass.impl.DebugInfoPass;
@@ -37,6 +38,7 @@ import io.zipit.core.pass.impl.WatermarkPass;
 import io.zipit.core.rules.DefaultRuleSet;
 import io.zipit.core.rules.RuleSet;
 import io.zipit.core.runtime.DefaultRuntimeSupport;
+import io.zipit.core.util.AsmUtil;
 import io.zipit.core.util.Jars;
 import io.zipit.core.util.Log;
 import org.objectweb.asm.tree.ClassNode;
@@ -161,6 +163,15 @@ public final class ZipitEngine {
         if (incremental != null) {
             incremental.apply(pool, mappings, stats);
         }
+        // Safety net: no class may be written with MethodHandle/MethodType/
+        // InvokeDynamic (major >= 51) or ConstantDynamic (major >= 55) constants
+        // while declaring an older class file version.
+        int versionBumped = AsmUtil.ensureConstantCompatibleVersions(pool, log);
+        if (versionBumped > 0) {
+            stats.add("output.version.bumped", versionBumped);
+            log.info("version-safety: upgraded %d class(es) to a class file version that supports their constants",
+                    versionBumped);
+        }
         listener.onProgress(92, "Writing " + config.output());
         Jars.write(config.output(), pool, hierarchy, config.preserveTimestamps(), log);
         IncrementalCache.write(config, inputHashes, mappings, log);
@@ -204,6 +215,7 @@ public final class ZipitEngine {
         passes.add(new JunkMemberPass());
         passes.add(new WatermarkPass());
         passes.add(new AntiDebugPass());
+        passes.add(new AuthGatePass());
         passes.add(new ResourceRewritePass());
         return passes;
     }

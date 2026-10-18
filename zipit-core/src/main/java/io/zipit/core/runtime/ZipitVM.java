@@ -533,7 +533,9 @@ public final class ZipitVM {
             return null;
         }
         switch (descriptor.charAt(descriptor.indexOf(')') + 1)) {
-            case 'Z': return boxI(((Boolean) value).booleanValue() ? 1 : 0);
+            case 'Z': return boxI(value instanceof Boolean
+                    ? (((Boolean) value).booleanValue() ? 1 : 0)
+                    : (((Number) value).intValue() != 0 ? 1 : 0));
             case 'B': return boxI(((Number) value).intValue());
             case 'C': return boxI(((Character) value).charValue());
             case 'S': return boxI(((Number) value).intValue());
@@ -814,10 +816,52 @@ public final class ZipitVM {
         return value instanceof Long || value instanceof Double;
     }
 
-    private static int i(Object value) { return ((Number) value).intValue(); }
-    private static long l(Object value) { return ((Number) value).longValue(); }
-    private static float f(Object value) { return ((Number) value).floatValue(); }
-    private static double d(Object value) { return ((Number) value).doubleValue(); }
+    /*
+     * The interpreter represents JVM boolean values as Integer 0/1 (JVM stack
+     * convention). Older payloads and reflection results may still hand us a
+     * java.lang.Boolean or java.lang.Character, so every numeric unboxing path
+     * must accept those boxed types as well; a bare (Number) cast aborts with
+     * ClassCastException inside virtualized code.
+     */
+    private static int i(Object value) {
+        if (value instanceof Boolean) {
+            return ((Boolean) value).booleanValue() ? 1 : 0;
+        }
+        if (value instanceof Character) {
+            return ((Character) value).charValue();
+        }
+        return ((Number) value).intValue();
+    }
+
+    private static long l(Object value) {
+        if (value instanceof Boolean) {
+            return ((Boolean) value).booleanValue() ? 1L : 0L;
+        }
+        if (value instanceof Character) {
+            return ((Character) value).charValue();
+        }
+        return ((Number) value).longValue();
+    }
+
+    private static float f(Object value) {
+        if (value instanceof Boolean) {
+            return ((Boolean) value).booleanValue() ? 1f : 0f;
+        }
+        if (value instanceof Character) {
+            return ((Character) value).charValue();
+        }
+        return ((Number) value).floatValue();
+    }
+
+    private static double d(Object value) {
+        if (value instanceof Boolean) {
+            return ((Boolean) value).booleanValue() ? 1d : 0d;
+        }
+        if (value instanceof Character) {
+            return ((Character) value).charValue();
+        }
+        return ((Number) value).doubleValue();
+    }
     private static Object boxI(int value) { return Integer.valueOf(value); }
     private static Object boxL(long value) { return Long.valueOf(value); }
     private static Object boxF(float value) { return Float.valueOf(value); }

@@ -106,6 +106,7 @@ public final class AntiLlmPass implements Pass {
         int callSites = 0;
         int wrapperLayers = 0;
         int seeds = 0;
+        int classes = 0;
         Random random = context.random();
 
         for (ClassNode node : new ArrayList<ClassNode>(context.classes().classes().values())) {
@@ -124,9 +125,11 @@ public final class AntiLlmPass implements Pass {
 
             List<MethodNode> originals = new ArrayList<MethodNode>(node.methods);
             Set<String> added = new HashSet<String>();
+            boolean touched = false;
 
             int decoyCount = context.config().antiLlm().decoyMethodsPerClass();
             if (decoyCount > 0) {
+                touched = true;
                 List<String> decoyNames = new ArrayList<String>();
                 List<String> decoyStrings = new ArrayList<String>();
                 for (int i = 0; i < decoyCount; i++) {
@@ -176,7 +179,11 @@ public final class AntiLlmPass implements Pass {
                     wrap(node, method, layers);
                     wrapperLayers += layers;
                     wrapped++;
+                    touched = true;
                 }
+            }
+            if (touched) {
+                classes++;
             }
         }
 
@@ -184,8 +191,9 @@ public final class AntiLlmPass implements Pass {
         context.stats().add("antiLlm.callsites", callSites);
         context.stats().add("antiLlm.wrapperLayers", wrapperLayers);
         context.stats().add("antiLlm.seeds", seeds);
+        context.stats().add("antiLlm.classes", classes);
         context.log().info("anti-llm: %d decoy methods, %d guarded call sites, %d wrapper layers across %d classes",
-                decoys, callSites, wrapperLayers, seeds);
+                decoys, callSites, wrapperLayers, classes);
     }
 
     private static boolean callSiteEligible(MethodNode method) {
@@ -285,7 +293,7 @@ public final class AntiLlmPass implements Pass {
         code.add(new VarInsnNode(Opcodes.ILOAD, 1));
         code.add(new InsnNode(Opcodes.IRETURN));
         method.maxLocals = 4;
-        method.maxStack = 0;
+        method.maxStack = 4;
         return method;
     }
 
@@ -317,7 +325,7 @@ public final class AntiLlmPass implements Pass {
         code.add(new VarInsnNode(Opcodes.ILOAD, 0));
         code.add(new InsnNode(Opcodes.IRETURN));
         method.maxLocals = 1;
-        method.maxStack = 0;
+        method.maxStack = 2;
         return method;
     }
 
@@ -337,7 +345,7 @@ public final class AntiLlmPass implements Pass {
             clinit = new MethodNode(Opcodes.ACC_STATIC, "<clinit>", "()V", null, null);
             clinit.instructions.add(new InsnNode(Opcodes.RETURN));
             clinit.maxLocals = 0;
-            clinit.maxStack = 0;
+            clinit.maxStack = 1;
             node.methods.add(clinit);
         }
         InsnList init = new InsnList();
@@ -345,6 +353,7 @@ public final class AntiLlmPass implements Pass {
         init.add(new org.objectweb.asm.tree.FieldInsnNode(
                 Opcodes.PUTSTATIC, node.name, fieldName, "I"));
         clinit.instructions.insert(init);
+        clinit.maxStack = Math.max(clinit.maxStack, 1);
     }
 
     private static void insertDecoyCall(ClassNode owner, MethodNode method, String seedField,
@@ -375,7 +384,7 @@ public final class AntiLlmPass implements Pass {
             body.localVariables = current.localVariables;
             body.visibleLocalVariableAnnotations = current.visibleLocalVariableAnnotations;
             body.invisibleLocalVariableAnnotations = current.invisibleLocalVariableAnnotations;
-            body.maxLocals = current.maxLocals;
+            body.maxLocals = Math.max(current.maxLocals, argumentSlots(current));
             body.maxStack = current.maxStack;
             node.methods.add(body);
 
@@ -384,8 +393,11 @@ public final class AntiLlmPass implements Pass {
             current.localVariables = null;
             current.visibleLocalVariableAnnotations = null;
             current.invisibleLocalVariableAnnotations = null;
-            current.maxLocals = Math.max(current.maxLocals, argumentSlots(current));
-            current.maxStack = 0;
+            int forwarderSlots = argumentSlots(current);
+            current.maxLocals = Math.max(current.maxLocals, forwarderSlots);
+            // A forwarder pushes receiver + arguments before the call and may keep
+            // a 2-slot return value afterwards; never leave maxStack at 0.
+            current.maxStack = forwarderSlots + 2;
             current = body;
         }
     }

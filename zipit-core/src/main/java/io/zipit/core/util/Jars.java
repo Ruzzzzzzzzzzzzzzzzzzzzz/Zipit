@@ -47,16 +47,15 @@ public final class Jars {
                         ClassNode node = new ClassNode();
                         reader.accept(node, 0);
                         if (pool.getClass(node.name) != null) {
-                            // Duplicate internal name (multi-release or embedded template):
-                            // keep the extra bytes untouched and freeze the class.
-                            pool.putResource(name, bytes, entry.getTime(), entry.getMethod());
-                            pool.freeze(node.name);
-                            log.warn("Duplicate class name %s at %s preserved as resource; class frozen",
-                                    node.name, name);
-                        } else {
-                            pool.putClass(name, bytes, node);
-                            pool.setClassTime(node.name, entry.getTime());
+                            // Silently freezing duplicates produces a JAR with stale
+                            // references (renamed classes still referenced by the frozen
+                            // copy). Fail loudly instead; flatten the input first.
+                            throw new IOException("Multi-release or duplicate class entry "
+                                    + name + " (internal name " + node.name + ") is not supported; "
+                                    + "flatten the JAR before obfuscating it");
                         }
+                        pool.putClass(name, bytes, node);
+                        pool.setClassTime(node.name, entry.getTime());
                         continue;
                     } catch (RuntimeException e) {
                         log.warn("Unparseable class entry %s preserved as resource: %s", name, e.getMessage());

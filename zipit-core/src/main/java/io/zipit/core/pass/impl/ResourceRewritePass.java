@@ -47,7 +47,8 @@ public final class ResourceRewritePass implements Pass {
         if (manifest != null) {
             Map<String, String> attributes = new LinkedHashMap<String, String>(Jars.parseManifest(manifest.bytes()));
             boolean changed = false;
-            for (String key : new String[]{"Main-Class", "Premain-Class", "Agent-Class", "Launcher-Agent-Class"}) {
+            for (String key : new String[]{"Main-Class", "Premain-Class", "Agent-Class",
+                    "Launcher-Agent-Class", "Rsrc-Main-Class", "Start-Class"}) {
                 String value = attributes.get(key);
                 if (value != null) {
                     String mapped = mapDotted(classMap, value.trim());

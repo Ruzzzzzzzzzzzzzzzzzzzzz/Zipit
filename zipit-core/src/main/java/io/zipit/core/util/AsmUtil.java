@@ -1,5 +1,8 @@
 package io.zipit.core.util;
 
+import io.zipit.core.model.ClassPool;
+import org.objectweb.asm.ConstantDynamic;
+import org.objectweb.asm.Handle;
 import org.objectweb.asm.Opcodes;
 import org.objectweb.asm.Type;
 import org.objectweb.asm.tree.AbstractInsnNode;
@@ -9,6 +12,7 @@ import org.objectweb.asm.tree.FieldNode;
 import org.objectweb.asm.tree.InsnList;
 import org.objectweb.asm.tree.InsnNode;
 import org.objectweb.asm.tree.IntInsnNode;
+import org.objectweb.asm.tree.InvokeDynamicInsnNode;
 import org.objectweb.asm.tree.LdcInsnNode;
 import org.objectweb.asm.tree.MethodNode;
 
@@ -17,7 +21,101 @@ import java.util.List;
 /** ASM helpers shared by all passes. */
 public final class AsmUtil implements Opcodes {
 
+    /** Minimum class file version for MethodHandle/MethodType/InvokeDynamic constants. */
+    public static final int MIN_INVOKE_DYNAMIC_VERSION = Opcodes.V1_7;
+
+    /** Minimum class file version for {@code CONSTANT_Dynamic} (condy) constants. */
+    public static final int MIN_CONSTANT_DYNAMIC_VERSION = Opcodes.V11;
+
     private AsmUtil() {
+    }
+
+    /**
+     * Returns the minimum class file <em>major</em> version this class needs
+     * because of its constant pool contents: 55 for {@code ConstantDynamic}, 51
+     * for MethodHandle/MethodType/InvokeDynamic, or {@code 0} when no upgrade is
+     * required. Note that {@link ClassNode#version} stores minor version in the
+     * high 16 bits (a JDK 1.1 class reads as {@code V1_1 == 3 << 16 | 45}), so
+     * only the low 16 bits are compared.
+     */
+    public static int requiredConstantVersion(ClassNode node) {
+        if ((node.version & 0xFFFF) >= MIN_CONSTANT_DYNAMIC_VERSION) {
+            return 0;
+        }
+        int required = 0;
+        boolean constantDynamic = false;
+        for (MethodNode method : node.methods) {
+            if (method.instructions == null) {
+                continue;
+            }
+            for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
+                if (insn instanceof InvokeDynamicInsnNode) {
+                    required = Math.max(required, MIN_INVOKE_DYNAMIC_VERSION);
+                } else if (insn instanceof LdcInsnNode) {
+                    Object constant = ((LdcInsnNode) insn).cst;
+                    if (constant instanceof ConstantDynamic) {
+                        constantDynamic = true;
+                    } else if (constant instanceof Handle
+                            || (constant instanceof Type && ((Type) constant).getSort() == Type.METHOD)) {
+                        required = Math.max(required, MIN_INVOKE_DYNAMIC_VERSION);
+                    }
+                }
+            }
+        }
+        if (constantDynamic) {
+            required = Math.max(required, MIN_CONSTANT_DYNAMIC_VERSION);
+        }
+        return required;
+    }
+
+    /**
+     * Safety net run just before writing: bumps every pool class whose
+     * constants require a newer class file version (51 for invoke-dynamic
+     * constants, 55 for condy). Returns the number of classes upgraded.
+     */
+    public static int ensureConstantCompatibleVersions(ClassPool pool, Log log) {
+        int upgraded = 0;
+        for (ClassNode node : pool.classes().values()) {
+            int required = requiredConstantVersion(node);
+            if (required <= (node.version & 0xFFFF)) {
+                continue;
+            }
+            if (containsJsrOrRet(node) && log != null) {
+                log.warn("version-safety: class %s needs class file version %d for its constants "
+                        + "but contains JSR/RET; JVM may reject the result", node.name, required);
+            }
+            if (log != null) {
+                log.debug("version-safety: %s class file version %d -> %d",
+                        node.name, node.version & 0xFFFF, required);
+            }
+            node.version = required;
+            upgraded++;
+        }
+        return upgraded;
+    }
+
+    /** True when any method of the class contains a JSR or RET instruction. */
+    public static boolean containsJsrOrRet(ClassNode node) {
+        for (MethodNode method : node.methods) {
+            if (containsJsrOrRet(method)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /** True when the method contains a JSR or RET instruction. */
+    public static boolean containsJsrOrRet(MethodNode method) {
+        if (method.instructions == null) {
+            return false;
+        }
+        for (AbstractInsnNode insn = method.instructions.getFirst(); insn != null; insn = insn.getNext()) {
+            int opcode = insn.getOpcode();
+            if (opcode == Opcodes.JSR || opcode == Opcodes.RET) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public static boolean hasAnnotation(List<AnnotationNode> annotations, String desc) {

@@ -84,18 +84,26 @@ public final class JunkMemberPass implements Pass {
 
     private static MethodNode junkMethod(String name, Random random) {
         int kind = random.nextInt(5);
+        int maxStack;
+        int maxLocals;
         MethodNode method;
         switch (kind) {
             case 0:
                 method = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
                         name, "()V", null, null);
                 method.instructions.add(new InsnNode(Opcodes.RETURN));
+                // No operands; keep a positive bound so no generated method ever
+                // reports maxStack == 0 to a downstream Analyzer.
+                maxStack = 1;
+                maxLocals = 0;
                 break;
             case 1:
                 method = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
                         name, "()I", null, null);
                 AsmUtil.pushInt(method.instructions, random.nextInt());
                 method.instructions.add(new InsnNode(Opcodes.IRETURN));
+                maxStack = 1;
+                maxLocals = 0;
                 break;
             case 2:
                 method = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
@@ -104,6 +112,8 @@ public final class JunkMemberPass implements Pass {
                 AsmUtil.pushInt(method.instructions, random.nextInt(1024) + 1);
                 method.instructions.add(new InsnNode(Opcodes.IXOR));
                 method.instructions.add(new InsnNode(Opcodes.IRETURN));
+                maxStack = 2;
+                maxLocals = 1;
                 break;
             case 3:
                 method = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
@@ -112,16 +122,20 @@ public final class JunkMemberPass implements Pass {
                 method.instructions.add(new org.objectweb.asm.tree.LdcInsnNode(Long.valueOf(random.nextLong() | 1L)));
                 method.instructions.add(new InsnNode(Opcodes.LXOR));
                 method.instructions.add(new InsnNode(Opcodes.LRETURN));
+                maxStack = 4;
+                maxLocals = 2;
                 break;
             default:
                 method = new MethodNode(Opcodes.ACC_PRIVATE | Opcodes.ACC_STATIC | Opcodes.ACC_SYNTHETIC,
                         name, "(Ljava/lang/String;)Ljava/lang/String;", null, null);
                 method.instructions.add(new VarInsnNode(Opcodes.ALOAD, 0));
                 method.instructions.add(new InsnNode(Opcodes.ARETURN));
+                maxStack = 1;
+                maxLocals = 1;
                 break;
         }
-        method.maxLocals = 0;
-        method.maxStack = 0;
+        method.maxLocals = maxLocals;
+        method.maxStack = maxStack;
         return method;
     }
 

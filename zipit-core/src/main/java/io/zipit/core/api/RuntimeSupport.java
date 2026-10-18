@@ -1,5 +1,6 @@
 package io.zipit.core.api;
 
+import io.zipit.core.config.ZipitConfig;
 import io.zipit.core.model.ClassPool;
 
 /**
@@ -36,6 +37,25 @@ public interface RuntimeSupport {
      * @return internal name of the interpreter class
      */
     String ensureVirtualMachine(ClassPool pool, long seed);
+
+    /**
+     * Ensures the server-backed authorization gate class exists in the pool.
+     *
+     * <p>The generated gate exposes {@code public static void guard()}; the
+     * {@code AuthGatePass} calls it at the start of entry points. The returned
+     * class is a renamed copy of the runtime template with the configured server,
+     * software, title, cache file, registration flag, timeout and entry points
+     * substituted in.</p>
+     *
+     * @param pool    program pool
+     * @param seed    deterministic seed
+     * @param options authorization gate configuration
+     * @return internal name of the gate class, or {@code null} when the runtime
+     *         support does not provide one
+     */
+    default String ensureAuthGate(ClassPool pool, long seed, ZipitConfig.AuthGateOptions options) {
+        return null;
+    }
 
     /**
      * Embeds a watermark in the program.
