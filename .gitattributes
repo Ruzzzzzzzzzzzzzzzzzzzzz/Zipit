@@ -1,0 +1,15 @@
+# Normalize all text files to LF in the repository
+* text=auto eol=lf
+
+# Shell scripts must keep LF
+*.sh text eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary assets
+*.jar binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.rar binary
+*.zip binary
